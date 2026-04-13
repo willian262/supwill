@@ -35,6 +35,30 @@ async function zohoRequest(path, params, accessToken) {
   try { return JSON.parse(text); } catch(e) { return { data: [], count: 0 }; }
 }
 
+// Busca TODOS os tickets de um statusType usando endpoint do departamento
+async function fetchByStatus(statusType, accessToken) {
+  const DEPT = '365059000000006907';
+  const LIMIT = 100;
+  let all = [];
+  let from = 1;
+
+  while (true) {
+    // Usa endpoint do departamento que aceita filtro de statusType
+    const data = await zohoRequest(
+      `departments/${DEPT}/tickets`,
+      { from, limit: LIMIT, statusType },
+      accessToken
+    );
+    const batch = data.data || [];
+    all = all.concat(batch);
+    if (batch.length < LIMIT) break;
+    from += LIMIT;
+    if (from > 5000) break; // segurança
+  }
+
+  return all;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -52,60 +76,34 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Endpoints que não são tickets: agents, departments, etc.
+    // Endpoints que não são tickets
     if (path !== 'tickets') {
       const data = await zohoRequest(path, { ...params, limit: params.limit || '100' }, accessToken);
       return res.status(200).json(data);
     }
 
-    // TICKETS: busca sem filtro e filtra server-side
-    // A API Zoho retorna em ordem crescente (mais antigos primeiro)
-    // Buscamos as últimas páginas para pegar os mais recentes
+    // TICKETS com statusType: usa endpoint do departamento
+    if (statusType) {
+      const tickets = await fetchByStatus(statusType, accessToken);
+      tickets.sort((a, b) => new Date(b.createdTime) - new Date(a.createdTime));
+      return res.status(200).json({ data: tickets, count: tickets.length });
+    }
+
+    // TICKETS sem filtro (ex: limit=2 para debug): busca normal
     const SAC_DEPT = '365059000000006907';
     const LIMIT = 100;
-
-    // Primeiro, descobre o total de tickets
-    const firstPage = await zohoRequest('tickets', { from: 1, limit: 1 }, accessToken);
-    const totalCount = parseInt(firstPage.count || firstPage.totalCount || 0);
+    const probe = await zohoRequest('tickets', { from: 1, limit: 1 }, accessToken);
+    const total = parseInt(probe.count || probe.totalCount || 1000);
+    const startFrom = Math.max(1, total - 199);
 
     let allTickets = [];
-
-    if (totalCount > 0) {
-      // Calcula de onde começar para pegar os últimos ~800 tickets (mais recentes)
-      const startFrom = Math.max(1, totalCount - 799);
-      
-      // Busca 8 páginas a partir dos mais recentes
-      for (let from = startFrom; from <= totalCount; from += LIMIT) {
-        const pageData = await zohoRequest('tickets', { from, limit: LIMIT }, accessToken);
-        const batch = pageData.data || [];
-        allTickets = allTickets.concat(batch);
-        if (batch.length < LIMIT) break;
-        if (allTickets.length >= 800) break;
-      }
-    } else {
-      // Fallback: busca 5 páginas normais
-      for (let page = 1; page <= 5; page++) {
-        const from = (page - 1) * LIMIT + 1;
-        const pageData = await zohoRequest('tickets', { from, limit: LIMIT }, accessToken);
-        const batch = pageData.data || [];
-        allTickets = allTickets.concat(batch);
-        if (batch.length < LIMIT) break;
-      }
+    for (let from = startFrom; from <= total; from += LIMIT) {
+      const pageData = await zohoRequest('tickets', { from, limit: LIMIT }, accessToken);
+      allTickets = allTickets.concat(pageData.data || []);
     }
-
-    // Ordena do mais recente para o mais antigo
     allTickets.sort((a, b) => new Date(b.createdTime) - new Date(a.createdTime));
-
-    // Filtra pelo departamento SAC
     const sacTickets = allTickets.filter(t => t.departmentId === SAC_DEPT);
-
-    // Filtra por statusType se solicitado (server-side)
-    let filtered = sacTickets;
-    if (statusType) {
-      filtered = sacTickets.filter(t => t.statusType === statusType);
-    }
-
-    return res.status(200).json({ data: filtered, count: filtered.length });
+    return res.status(200).json({ data: sacTickets, count: sacTickets.length });
 
   } catch (err) {
     return res.status(500).json({ error: 'Erro: ' + err.message });

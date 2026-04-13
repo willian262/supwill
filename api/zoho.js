@@ -61,39 +61,18 @@ export default async function handler(req, res) {
     const SAC_DEPT = '365059000000006907';
     const LIMIT = 100;
 
-    // Busca 50 páginas em paralelo (5000 tickets) — cobre toda a base
-    // A Zoho retorna em ordem crescente (mais antigos primeiro)
-    // Páginas sem dados simplesmente retornam array vazio
-    const ranges = [];
-    for (let from = 1; from <= 5000; from += LIMIT) {
-      ranges.push(from);
-    }
-
-    // Executa em batches de 15 paralelos
-    const BATCH = 15;
+    // Busca sequencial: página por página até retornar vazio
+    // Máximo 5000 tickets para segurança
     let allTickets = [];
-    for (let i = 0; i < ranges.length; i += BATCH) {
-      const chunk = ranges.slice(i, i + BATCH);
-      const results = await Promise.all(
-        chunk.map(from => zohoRequest('tickets', { from, limit: LIMIT }, accessToken))
-      );
-      let batchEmpty = true;
-      results.forEach(r => {
-        const batch = r.data || [];
-        if (batch.length > 0) batchEmpty = false;
-        allTickets = allTickets.concat(batch);
-      });
-      // Se todas as páginas deste batch vieram vazias, chegamos no fim
-      if (batchEmpty) break;
+    let from = 1;
+    while (from <= 5000) {
+      const result = await zohoRequest('tickets', { from, limit: LIMIT }, accessToken);
+      const batch = result.data || [];
+      if (batch.length === 0) break;
+      allTickets = allTickets.concat(batch);
+      if (batch.length < LIMIT) break; // última página
+      from += LIMIT;
     }
-
-    // Remove duplicatas por id
-    const seen = new Set();
-    allTickets = allTickets.filter(t => {
-      if (seen.has(t.id)) return false;
-      seen.add(t.id);
-      return true;
-    });
 
     // Ordena do mais recente para o mais antigo
     allTickets.sort((a, b) => new Date(b.createdTime) - new Date(a.createdTime));

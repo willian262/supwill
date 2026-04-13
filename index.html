@@ -452,19 +452,26 @@
     try {
       const dept = await getDeptId();
 
-      const [openData, pendData, resolvedData] = await Promise.all([
+      const [openData, pendData, resolvedData, agentsData] = await Promise.all([
         zoho('tickets', { statusType: 'Open'   }),
         zoho('tickets', { statusType: 'On Hold' }),
-        zoho('tickets', { statusType: 'Closed' })
+        zoho('tickets', { statusType: 'Closed' }),
+        zoho('agents',  { limit: 100 })
       ]);
 
       const open      = openData.data     || [];
       const pending   = pendData.data     || [];
       const escalated = open.filter(t => t.priority === 'Vencido');
       const resolved  = resolvedData.data || [];
-      const allActive = [...open, ...pending, ...escalated];
+      const allActive = [...open, ...pending];
 
-      renderDash({ open, pending, escalated, resolved, allActive });
+      // Mapa assigneeId -> nome
+      const agentNames = {};
+      (agentsData.data || []).forEach(a => {
+        agentNames[a.id] = (a.firstName + ' ' + (a.lastName || '')).trim() || a.name || a.emailAddress || a.id;
+      });
+
+      renderDash({ open, pending, escalated, resolved, allActive, agentNames });
 
       document.getElementById('lastUpdate').textContent =
         'Atualizado ' + new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
@@ -477,7 +484,7 @@
   }
 
   // ─── RENDER ──────────────────────────────────────────────────────────────────
-  function renderDash({ open, pending, escalated, resolved, allActive }) {
+  function renderDash({ open, pending, escalated, resolved, allActive, agentNames = {} }) {
     const total = allActive.length;
 
     // ── Metrics ──
@@ -553,9 +560,9 @@
     // ── Agentes ──
     const agentMap = {};
     const addToAgent = (ticket, status) => {
-      const name = ticket.assignee?.firstName
-        ? `${ticket.assignee.firstName} ${ticket.assignee.lastName || ''}`.trim()
-        : (ticket.assignee?.name || 'Sem agente');
+      const name = ticket.assigneeId && agentNames[ticket.assigneeId]
+        ? agentNames[ticket.assigneeId]
+        : (ticket.assigneeId ? `ID:${ticket.assigneeId.slice(-4)}` : 'Sem agente');
       if (!agentMap[name]) agentMap[name] = { open: 0, pending: 0, escalated: 0 };
       agentMap[name][status]++;
     };
@@ -630,7 +637,7 @@
 
     document.getElementById('ticketRows').innerHTML = critical.length
       ? critical.map(t => {
-          const agent = t.assignee?.firstName ? `${t.assignee.firstName} ${(t.assignee.lastName||'')[0]||''}.` : '—';
+          const agent = t.assigneeId && agentNames[t.assigneeId] ? agentNames[t.assigneeId].split(' ')[0] : '—';
           return `<tr>
             <td class="ticket-id">#${t.ticketNumber || t.id}</td>
             <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.subject}</td>

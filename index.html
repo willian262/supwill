@@ -452,16 +452,14 @@
     try {
       const dept = await getDeptId();
 
-      const [openData, pendData, resolvedData] = await Promise.all([
-        zoho('tickets', { statusType: 'Open'   }),
-        zoho('tickets', { statusType: 'On Hold' }),
-        zoho('tickets', { statusType: 'Closed' })
-      ]);
+      // Uma única chamada busca TODOS os tickets — o backend varre tudo uma vez só
+      const allData = await zoho('tickets', {});
+      const allRaw  = allData.data || [];
 
-      const open      = openData.data     || [];
-      const pending   = pendData.data     || [];
+      const open     = allRaw.filter(t => t.statusType === 'Open');
+      const pending  = allRaw.filter(t => t.statusType === 'On Hold');
+      const resolved = allRaw.filter(t => t.statusType === 'Closed');
       const escalated = open.filter(t => t.priority === 'Vencido');
-      const resolved  = resolvedData.data || [];
       const allActive = [...open, ...pending];
 
       // Busca todos os agentes com paginação

@@ -454,7 +454,7 @@
 
       const [openData, pendData, resolvedData] = await Promise.all([
         zoho('tickets', { statusType: 'Open'   }),
-        zoho('tickets', { statusType: 'OnHold' }),
+        zoho('tickets', { statusType: 'On Hold' }),
         zoho('tickets', { statusType: 'Closed' })
       ]);
 

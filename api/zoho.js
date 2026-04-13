@@ -32,7 +32,7 @@ async function zohoRequest(path, params, accessToken) {
   });
   const text = await res.text();
   if (!text || text.trim() === '') return { data: [], count: 0 };
-  return JSON.parse(text);
+  try { return JSON.parse(text); } catch(e) { return { data: [], count: 0 }; }
 }
 
 export default async function handler(req, res) {
@@ -60,36 +60,37 @@ export default async function handler(req, res) {
     const SAC_DEPT = '365059000000006907';
     const LIMIT = 100;
     let allTickets = [];
-    let from = 1;
-    let totalFetched = 0;
 
-    while (totalFetched < 500) {
-      const data = await zohoRequest('tickets', {
-        from,
-        limit: LIMIT,
-        sortBy: 'createdTime',
-        sortOrder: 'desc'
-      }, accessToken);
+    const firstPage = await zohoRequest('tickets', { from: 1, limit: LIMIT }, accessToken);
+    const firstBatch = firstPage.data || [];
 
-      const batch = data.data || [];
-      if (batch.length === 0) break;
-
-      const sacBatch = batch.filter(t => t.departmentId === SAC_DEPT);
-      allTickets = allTickets.concat(sacBatch);
-      totalFetched += batch.length;
-
-      if (batch.length < LIMIT) break;
-      from += LIMIT;
+    if (firstBatch.length === 0) {
+      return res.status(200).json({ data: [], count: 0 });
     }
 
-    let filtered = allTickets;
+    allTickets = allTickets.concat(firstBatch);
+
+    if (firstBatch.length === LIMIT) {
+      for (let page = 2; page <= 5; page++) {
+        const pageData = await zohoRequest('tickets', { from: (page - 1) * LIMIT + 1, limit: LIMIT }, accessToken);
+        const batch = pageData.data || [];
+        allTickets = allTickets.concat(batch);
+        if (batch.length < LIMIT) break;
+      }
+    }
+
+    allTickets.sort((a, b) => new Date(b.createdTime) - new Date(a.createdTime));
+
+    const sacTickets = allTickets.filter(t => t.departmentId === SAC_DEPT);
+
+    let filtered = sacTickets;
     if (statusType) {
-      filtered = allTickets.filter(t => t.statusType === statusType);
+      filtered = sacTickets.filter(t => t.statusType === statusType);
     }
 
     return res.status(200).json({ data: filtered, count: filtered.length });
 
   } catch (err) {
-    return res.status(500).json({ error: 'Erro ao chamar Zoho: ' + err.message });
+    return res.status(500).json({ error: 'Erro: ' + err.message });
   }
 }

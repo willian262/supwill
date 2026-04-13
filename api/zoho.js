@@ -21,32 +21,18 @@ async function getAccessToken() {
   return _cachedToken;
 }
 
-async function fetchAllTickets(accessToken, orgId) {
-  const SAC_DEPT = '365059000000006907';
-  let allTickets = [];
-  let from = 1;
-  const limit = 100;
-
-  while (true) {
-    const qs = new URLSearchParams({ from, limit, sortBy: 'createdTime' }).toString();
-    const url = `https://desk.zoho.com/api/v1/tickets?${qs}`;
-    const res = await fetch(url, {
-      headers: {
-        'orgId': orgId,
-        'Authorization': `Zoho-oauthtoken ${accessToken}`
-      }
-    });
-    const text = await res.text();
-    if (!text || text.trim() === '') break;
-    const data = JSON.parse(text);
-    const tickets = (data.data || []).filter(t => t.departmentId === SAC_DEPT);
-    allTickets = allTickets.concat(tickets);
-    if ((data.data || []).length < limit) break;
-    from += limit;
-    if (from > 500) break; // máximo 500 tickets por segurança
-  }
-
-  return allTickets;
+async function zohoRequest(path, params, accessToken) {
+  const qs = new URLSearchParams(params).toString();
+  const url = `https://desk.zoho.com/api/v1/${path}?${qs}`;
+  const res = await fetch(url, {
+    headers: {
+      'orgId': process.env.ZOHO_ORG_ID,
+      'Authorization': `Zoho-oauthtoken ${accessToken}`
+    }
+  });
+  const text = await res.text();
+  if (!text || text.trim() === '') return { data: [], count: 0 };
+  return JSON.parse(text);
 }
 
 export default async function handler(req, res) {
@@ -66,29 +52,42 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Para tickets, busca tudo e filtra no servidor
-    if (path === 'tickets') {
-      const allTickets = await fetchAllTickets(accessToken, process.env.ZOHO_ORG_ID);
-      let filtered = allTickets;
-      if (statusType) {
-        filtered = allTickets.filter(t => t.statusType === statusType);
-      }
-      return res.status(200).json({ data: filtered, count: filtered.length });
+    if (path !== 'tickets') {
+      const data = await zohoRequest(path, { ...params, limit: params.limit || '100' }, accessToken);
+      return res.status(200).json(data);
     }
 
-    // Para outros endpoints (departments, etc)
-    const qs = new URLSearchParams({ ...params, limit: params.limit || '100' }).toString();
-    const url = `https://desk.zoho.com/api/v1/${path}?${qs}`;
-    const zohoRes = await fetch(url, {
-      headers: {
-        'orgId': process.env.ZOHO_ORG_ID,
-        'Authorization': `Zoho-oauthtoken ${accessToken}`
-      }
-    });
-    const text = await zohoRes.text();
-    if (!text || text.trim() === '') return res.status(200).json({ data: [], count: 0 });
-    const data = JSON.parse(text);
-    return res.status(zohoRes.status).json(data);
+    const SAC_DEPT = '365059000000006907';
+    const LIMIT = 100;
+    let allTickets = [];
+    let from = 1;
+    let totalFetched = 0;
+
+    while (totalFetched < 500) {
+      const data = await zohoRequest('tickets', {
+        from,
+        limit: LIMIT,
+        sortBy: 'createdTime',
+        sortOrder: 'desc'
+      }, accessToken);
+
+      const batch = data.data || [];
+      if (batch.length === 0) break;
+
+      const sacBatch = batch.filter(t => t.departmentId === SAC_DEPT);
+      allTickets = allTickets.concat(sacBatch);
+      totalFetched += batch.length;
+
+      if (batch.length < LIMIT) break;
+      from += LIMIT;
+    }
+
+    let filtered = allTickets;
+    if (statusType) {
+      filtered = allTickets.filter(t => t.statusType === statusType);
+    }
+
+    return res.status(200).json({ data: filtered, count: filtered.length });
 
   } catch (err) {
     return res.status(500).json({ error: 'Erro ao chamar Zoho: ' + err.message });

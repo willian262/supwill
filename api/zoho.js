@@ -35,30 +35,6 @@ async function zohoRequest(path, params, accessToken) {
   try { return JSON.parse(text); } catch(e) { return { data: [], count: 0 }; }
 }
 
-// Busca TODOS os tickets de um statusType usando endpoint do departamento
-async function fetchByStatus(statusType, accessToken) {
-  const DEPT = '365059000000006907';
-  const LIMIT = 100;
-  let all = [];
-  let from = 1;
-
-  while (true) {
-    // Usa endpoint do departamento que aceita filtro de statusType
-    const data = await zohoRequest(
-      `departments/${DEPT}/tickets`,
-      { from, limit: LIMIT, statusType },
-      accessToken
-    );
-    const batch = data.data || [];
-    all = all.concat(batch);
-    if (batch.length < LIMIT) break;
-    from += LIMIT;
-    if (from > 5000) break; // segurança
-  }
-
-  return all;
-}
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -82,28 +58,48 @@ export default async function handler(req, res) {
       return res.status(200).json(data);
     }
 
-    // TICKETS com statusType: usa endpoint do departamento
-    if (statusType) {
-      const tickets = await fetchByStatus(statusType, accessToken);
-      tickets.sort((a, b) => new Date(b.createdTime) - new Date(a.createdTime));
-      return res.status(200).json({ data: tickets, count: tickets.length });
-    }
-
-    // TICKETS sem filtro (ex: limit=2 para debug): busca normal
     const SAC_DEPT = '365059000000006907';
     const LIMIT = 100;
-    const probe = await zohoRequest('tickets', { from: 1, limit: 1 }, accessToken);
-    const total = parseInt(probe.count || probe.totalCount || 1000);
-    const startFrom = Math.max(1, total - 199);
 
-    let allTickets = [];
-    for (let from = startFrom; from <= total; from += LIMIT) {
-      const pageData = await zohoRequest('tickets', { from, limit: LIMIT }, accessToken);
-      allTickets = allTickets.concat(pageData.data || []);
+    // Descobre o total de tickets na conta
+    const probe = await zohoRequest('tickets', { from: 1, limit: 1 }, accessToken);
+    const total = parseInt(probe.count || probe.totalCount || 0);
+
+    if (total === 0) {
+      return res.status(200).json({ data: [], count: 0 });
     }
+
+    // Busca em paralelo as últimas 3000 posições (cobre tickets ativos de meses atrás)
+    const startFrom = Math.max(1, total - 2999);
+    const ranges = [];
+    for (let from = startFrom; from <= total; from += LIMIT) {
+      ranges.push(from);
+    }
+
+    // Paralelo em batches de 15 para não sobrecarregar
+    const BATCH = 15;
+    let allTickets = [];
+    for (let i = 0; i < ranges.length; i += BATCH) {
+      const chunk = ranges.slice(i, i + BATCH);
+      const results = await Promise.all(
+        chunk.map(from => zohoRequest('tickets', { from, limit: LIMIT }, accessToken))
+      );
+      results.forEach(r => { allTickets = allTickets.concat(r.data || []); });
+    }
+
+    // Ordena do mais recente para o mais antigo
     allTickets.sort((a, b) => new Date(b.createdTime) - new Date(a.createdTime));
+
+    // Filtra pelo departamento SAC
     const sacTickets = allTickets.filter(t => t.departmentId === SAC_DEPT);
-    return res.status(200).json({ data: sacTickets, count: sacTickets.length });
+
+    // Filtra por statusType se solicitado
+    let filtered = sacTickets;
+    if (statusType) {
+      filtered = sacTickets.filter(t => t.statusType === statusType);
+    }
+
+    return res.status(200).json({ data: filtered, count: filtered.length });
 
   } catch (err) {
     return res.status(500).json({ error: 'Erro: ' + err.message });

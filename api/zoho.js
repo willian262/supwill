@@ -35,6 +35,36 @@ async function zohoRequest(path, params, accessToken) {
   try { return JSON.parse(text); } catch(e) { return { data: [], count: 0 }; }
 }
 
+async function fetchAllTickets(statusType, accessToken) {
+  const SAC_DEPT = '365059000000006907';
+  const LIMIT = 100;
+  let allTickets = [];
+  let from = 1;
+
+  // Busca até 10 páginas (1000 tickets) para o statusType solicitado
+  while (from <= 1000) {
+    const params = { from, limit: LIMIT };
+    // A API Zoho aceita statusType como filtro nativo
+    if (statusType) params.statusType = statusType;
+
+    const pageData = await zohoRequest('tickets', params, accessToken);
+    const batch = pageData.data || [];
+
+    // Filtra pelo departamento SAC
+    const sacBatch = batch.filter(t => t.departmentId === SAC_DEPT);
+    allTickets = allTickets.concat(sacBatch);
+
+    // Se retornou menos que o limite, chegou no fim
+    if (batch.length < LIMIT) break;
+    from += LIMIT;
+  }
+
+  // Ordena do mais recente para o mais antigo
+  allTickets.sort((a, b) => new Date(b.createdTime) - new Date(a.createdTime));
+
+  return allTickets;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -52,43 +82,15 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Para endpoints que não são tickets (agents, departments, etc.)
     if (path !== 'tickets') {
       const data = await zohoRequest(path, { ...params, limit: params.limit || '100' }, accessToken);
       return res.status(200).json(data);
     }
 
-    const SAC_DEPT = '365059000000006907';
-    const LIMIT = 100;
-    let allTickets = [];
-
-    const firstPage = await zohoRequest('tickets', { from: 1, limit: LIMIT }, accessToken);
-    const firstBatch = firstPage.data || [];
-
-    if (firstBatch.length === 0) {
-      return res.status(200).json({ data: [], count: 0 });
-    }
-
-    allTickets = allTickets.concat(firstBatch);
-
-    if (firstBatch.length === LIMIT) {
-      for (let page = 2; page <= 5; page++) {
-        const pageData = await zohoRequest('tickets', { from: (page - 1) * LIMIT + 1, limit: LIMIT }, accessToken);
-        const batch = pageData.data || [];
-        allTickets = allTickets.concat(batch);
-        if (batch.length < LIMIT) break;
-      }
-    }
-
-    allTickets.sort((a, b) => new Date(b.createdTime) - new Date(a.createdTime));
-
-    const sacTickets = allTickets.filter(t => t.departmentId === SAC_DEPT);
-
-    let filtered = sacTickets;
-    if (statusType) {
-      filtered = sacTickets.filter(t => t.statusType === statusType);
-    }
-
-    return res.status(200).json({ data: filtered, count: filtered.length });
+    // Para tickets: busca todas as páginas com filtro nativo de statusType
+    const tickets = await fetchAllTickets(statusType || null, accessToken);
+    return res.status(200).json({ data: tickets, count: tickets.length });
 
   } catch (err) {
     return res.status(500).json({ error: 'Erro: ' + err.message });

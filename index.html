@@ -299,23 +299,16 @@
   <div class="config-screen">
     <div class="config-card">
       <h2>Configurar conexão</h2>
-      <p>Insira as credenciais do Zoho Desk. Elas ficam salvas apenas no seu navegador (localStorage).</p>
+      <p>Insira o Org ID da sua conta Zoho Desk. A autenticação OAuth já está configurada automaticamente.</p>
       <div class="field">
         <label>ORG ID do Zoho Desk</label>
         <input type="text" id="cfgOrgId" placeholder="ex: 738291847" />
       </div>
-      <div class="field">
-        <label>API KEY (Zoho API Token)</label>
-        <input type="password" id="cfgApiKey" placeholder="Zapitoken xxxxxxxxxxxxxxxx" />
-      </div>
-      <div class="field">
-        <label>Domínio do Zoho (região)</label>
-        <input type="text" id="cfgDomain" placeholder="desk.zoho.com" value="desk.zoho.com" />
-      </div>
+      <input type="hidden" id="cfgApiKey" value="oauth" />
+      <input type="hidden" id="cfgDomain" value="desk.zoho.com" />
       <button class="save-btn" onclick="saveConfig()">Salvar e conectar</button>
       <p class="config-note">
-        Para obter o API Token: Zoho Desk → Settings → Developer Space → API → Zapitoken<br>
-        Para o Org ID: Settings → General → Account Details
+        Para o Org ID: Zoho Desk → Settings → General → Account Details
       </p>
     </div>
   </div>
@@ -411,70 +404,113 @@
 </div>
 
 <script>
-  // ─── CONFIG ─────────────────────────────────────────────────────────────────
-  const CFG_KEY = 'neosolar_sac_cfg';
-  let cfg = null;
+  // ─── OAUTH CONFIG ────────────────────────────────────────────────────────────
+  const ZOHO_CLIENT_ID     = '1000.WOOVSXCA33AC46TNVPW2TC7FEQAOUN';
+  const ZOHO_CLIENT_SECRET = 'a7ee1204fb9afa748e980817ab358983d41831c91e';
+  const ZOHO_REFRESH_TOKEN = '1000.16ed6042fccab4da0bef858f29698e03.c62e7578666e8f3f99456324c8c9b554';
+  const ZOHO_DOMAIN        = 'desk.zoho.com';
+  const ZOHO_ACCOUNTS      = 'accounts.zoho.com';
+  const DEPT_NAME          = 'SAC';
+  const CFG_KEY            = 'neosolar_sac_cfg';
 
-  function loadConfig() {
-    try { cfg = JSON.parse(localStorage.getItem(CFG_KEY)); } catch(e) { cfg = null; }
-    return cfg;
-  }
-
-  function saveConfig() {
-    const orgId  = document.getElementById('cfgOrgId').value.trim();
-    const apiKey = document.getElementById('cfgApiKey').value.trim();
-    const domain = document.getElementById('cfgDomain').value.trim() || 'desk.zoho.com';
-    if (!orgId || !apiKey) { alert('Preencha Org ID e API Key.'); return; }
-    cfg = { orgId, apiKey, domain };
-    localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
-    loadData();
-  }
-
-  function showConfig() {
-    show('viewConfig');
-    if (cfg) {
-      document.getElementById('cfgOrgId').value  = cfg.orgId  || '';
-      document.getElementById('cfgApiKey').value = cfg.apiKey || '';
-      document.getElementById('cfgDomain').value = cfg.domain || 'desk.zoho.com';
-    }
-  }
+  let accessToken  = null;
+  let tokenExpires = 0;
+  let orgId        = null;
+  let deptId       = null;
 
   // ─── VIEWS ──────────────────────────────────────────────────────────────────
   const views = ['viewConfig','viewLoading','viewError','viewDash'];
   function show(id) { views.forEach(v => document.getElementById(v).style.display = v===id ? '' : 'none'); }
 
+  function showConfig() {
+    show('viewConfig');
+    const cfg = getSavedCfg();
+    if (cfg) {
+      document.getElementById('cfgOrgId').value  = cfg.orgId  || '';
+      document.getElementById('cfgApiKey').value = '';
+      document.getElementById('cfgDomain').value = cfg.domain || ZOHO_DOMAIN;
+    }
+  }
+
+  function saveConfig() {
+    const inputOrgId = document.getElementById('cfgOrgId').value.trim();
+    if (!inputOrgId) { alert('Preencha o Org ID.'); return; }
+    localStorage.setItem(CFG_KEY, JSON.stringify({ orgId: inputOrgId }));
+    orgId = inputOrgId;
+    loadData();
+  }
+
+  function getSavedCfg() {
+    try { return JSON.parse(localStorage.getItem(CFG_KEY)); } catch(e) { return null; }
+  }
+
+  // ─── ACCESS TOKEN (OAuth 2.0) ─────────────────────────────────────────────
+  async function getAccessToken() {
+    if (accessToken && Date.now() < tokenExpires - 60000) return accessToken;
+    const params = new URLSearchParams({
+      refresh_token: ZOHO_REFRESH_TOKEN,
+      client_id:     ZOHO_CLIENT_ID,
+      client_secret: ZOHO_CLIENT_SECRET,
+      grant_type:    'refresh_token'
+    });
+    const res = await fetch(`https://${ZOHO_ACCOUNTS}/oauth/v2/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params
+    });
+    const data = await res.json();
+    if (!data.access_token) throw new Error('Falha ao obter access token: ' + (data.error || JSON.stringify(data)));
+    accessToken  = data.access_token;
+    tokenExpires = Date.now() + (data.expires_in || 3600) * 1000;
+    return accessToken;
+  }
+
   // ─── ZOHO API ────────────────────────────────────────────────────────────────
   async function zoho(path, params = {}) {
-    const qs = new URLSearchParams({ ...params, limit: params.limit || 50 }).toString();
-    const url = `https://${cfg.domain}/api/v1/${path}?${qs}`;
+    const token = await getAccessToken();
+    const qs = new URLSearchParams({ ...params, limit: params.limit || 100 }).toString();
+    const url = `https://${ZOHO_DOMAIN}/api/v1/${path}?${qs}`;
     const res = await fetch(url, {
       headers: {
-        'orgId': cfg.orgId,
-        'Authorization': `Zoho-authtoken ${cfg.apiKey}`
+        'orgId': orgId,
+        'Authorization': `Zoho-oauthtoken ${token}`
       }
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status} em ${path}`);
     return res.json();
+  }
+
+  // ─── BUSCAR DEPT ID DO SAC ────────────────────────────────────────────────
+  async function getDeptId() {
+    if (deptId) return deptId;
+    const data = await zoho('departments', { limit: 50 });
+    const depts = data.data || [];
+    const sac = depts.find(d => d.name && d.name.toUpperCase() === DEPT_NAME.toUpperCase());
+    if (!sac) throw new Error(`Departamento "${DEPT_NAME}" não encontrado. Departamentos disponíveis: ${depts.map(d=>d.name).join(', ')}`);
+    deptId = sac.id;
+    return deptId;
   }
 
   // ─── LOAD DATA ────────────────────────────────────────────────────────────────
   async function loadData() {
-    loadConfig();
-    if (!cfg || !cfg.apiKey || !cfg.orgId) { showConfig(); return; }
+    const cfg = getSavedCfg();
+    if (!cfg || !cfg.orgId) { showConfig(); return; }
+    orgId = cfg.orgId;
     show('viewLoading');
     try {
-      // Fetch tickets with different statuses
+      const dept = await getDeptId();
+
       const [openData, pendData, escData, resolvedData] = await Promise.all([
-        zoho('tickets', { status: 'Open', limit: 100 }),
-        zoho('tickets', { status: 'On Hold', limit: 100 }),
-        zoho('tickets', { status: 'Escalated', limit: 50 }),
-        zoho('tickets', { status: 'Closed', limit: 100 })
+        zoho('tickets', { status: 'Open',      departmentId: dept, limit: 100 }),
+        zoho('tickets', { status: 'On Hold',   departmentId: dept, limit: 100 }),
+        zoho('tickets', { status: 'Escalated', departmentId: dept, limit: 50  }),
+        zoho('tickets', { status: 'Closed',    departmentId: dept, limit: 100 })
       ]);
 
-      const open     = openData.data     || [];
-      const pending  = pendData.data     || [];
-      const escalated= escData.data      || [];
-      const resolved = resolvedData.data || [];
+      const open      = openData.data     || [];
+      const pending   = pendData.data     || [];
+      const escalated = escData.data      || [];
+      const resolved  = resolvedData.data || [];
       const allActive = [...open, ...pending, ...escalated];
 
       renderDash({ open, pending, escalated, resolved, allActive });
@@ -485,7 +521,7 @@
       show('viewDash');
     } catch(err) {
       document.getElementById('errorMsg').textContent =
-        `Erro: ${err.message}. Verifique suas credenciais ou tente novamente.`;
+        `Erro: ${err.message}`;
       show('viewError');
     }
   }
@@ -679,8 +715,9 @@
   }
 
   // ─── INIT ─────────────────────────────────────────────────────────────────────
-  loadConfig();
-  if (cfg && cfg.apiKey && cfg.orgId) {
+  const _cfg = getSavedCfg();
+  if (_cfg && _cfg.orgId) {
+    orgId = _cfg.orgId;
     loadData();
   } else {
     showConfig();
@@ -688,7 +725,7 @@
 
   // Auto-refresh a cada 5 minutos
   setInterval(() => {
-    if (cfg && cfg.apiKey) loadData();
+    if (orgId) loadData();
   }, 5 * 60 * 1000);
 </script>
 </body>

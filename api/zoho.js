@@ -21,7 +21,7 @@ async function getAccessToken() {
   return _cachedToken;
 }
 
-async function zohoRequest(path, params, accessToken) {
+async function zohoRaw(path, params, accessToken) {
   const qs = new URLSearchParams(params).toString();
   const url = `https://desk.zoho.com/api/v1/${path}?${qs}`;
   const res = await fetch(url, {
@@ -31,6 +31,11 @@ async function zohoRequest(path, params, accessToken) {
     }
   });
   const text = await res.text();
+  return { status: res.status, text };
+}
+
+async function zohoRequest(path, params, accessToken) {
+  const { text } = await zohoRaw(path, params, accessToken);
   if (!text || text.trim() === '') return { data: [], count: 0 };
   try { return JSON.parse(text); } catch(e) { return { data: [], count: 0 }; }
 }
@@ -41,7 +46,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { path, statusType, ...params } = req.query;
+  const { path, statusType, debug, ...params } = req.query;
   if (!path) return res.status(400).json({ error: 'path obrigatório' });
 
   let accessToken;
@@ -58,25 +63,39 @@ export default async function handler(req, res) {
       return res.status(200).json(data);
     }
 
+    // DEBUG: mostra resposta crua da Zoho
+    if (debug === '1') {
+      const { status, text } = await zohoRaw('tickets', { from: 1, limit: 2 }, accessToken);
+      return res.status(200).json({ zohoStatus: status, zohoRaw: text.slice(0, 2000) });
+    }
+
     const SAC_DEPT = '365059000000006907';
     const LIMIT = 100;
 
-    // Descobre o total de tickets na conta
-    const probe = await zohoRequest('tickets', { from: 1, limit: 1 }, accessToken);
-    const total = parseInt(probe.count || probe.totalCount || 0);
+    // Busca as primeiras 5 páginas E as últimas 5 páginas em paralelo
+    // Assim cobre tickets novos E tickets antigos que ainda estão ativos
+    const firstRanges = [1, 101, 201, 301, 401];
+    
+    // Também busca probe para tentar pegar o total
+    const probeRaw = await zohoRaw('tickets', { from: 1, limit: 1 }, accessToken);
+    let total = 0;
+    try {
+      const probeJson = JSON.parse(probeRaw.text);
+      total = parseInt(probeJson.count || probeJson.totalCount || probeJson.total || 0);
+    } catch(e) {}
 
-    if (total === 0) {
-      return res.status(200).json({ data: [], count: 0 });
+    // Monta ranges: primeiras 5 páginas + últimas 25 páginas (se soubermos o total)
+    let ranges = [...firstRanges];
+    if (total > 500) {
+      const startFrom = Math.max(501, total - 2499);
+      for (let from = startFrom; from <= total; from += LIMIT) {
+        ranges.push(from);
+      }
     }
+    // Remove duplicatas e ordena
+    ranges = [...new Set(ranges)].sort((a,b) => a-b);
 
-    // Busca em paralelo as últimas 3000 posições (cobre tickets ativos de meses atrás)
-    const startFrom = Math.max(1, total - 2999);
-    const ranges = [];
-    for (let from = startFrom; from <= total; from += LIMIT) {
-      ranges.push(from);
-    }
-
-    // Paralelo em batches de 15 para não sobrecarregar
+    // Busca em paralelo (batches de 15)
     const BATCH = 15;
     let allTickets = [];
     for (let i = 0; i < ranges.length; i += BATCH) {
@@ -86,6 +105,10 @@ export default async function handler(req, res) {
       );
       results.forEach(r => { allTickets = allTickets.concat(r.data || []); });
     }
+
+    // Remove duplicatas por id
+    const seen = new Set();
+    allTickets = allTickets.filter(t => { if (seen.has(t.id)) return false; seen.add(t.id); return true; });
 
     // Ordena do mais recente para o mais antigo
     allTickets.sort((a, b) => new Date(b.createdTime) - new Date(a.createdTime));
@@ -99,9 +122,9 @@ export default async function handler(req, res) {
       filtered = sacTickets.filter(t => t.statusType === statusType);
     }
 
-    return res.status(200).json({ data: filtered, count: filtered.length });
+    return res.status(200).json({ data: filtered, count: filtered.length, _total: total, _fetched: allTickets.length });
 
   } catch (err) {
-    return res.status(500).json({ error: 'Erro: ' + err.message });
+    return res.status(500).json({ error: 'Erro: ' + err.message, stack: err.stack });
   }
 }

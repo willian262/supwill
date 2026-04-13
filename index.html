@@ -404,98 +404,50 @@
 </div>
 
 <script>
-  // ─── OAUTH CONFIG ────────────────────────────────────────────────────────────
-  const ZOHO_CLIENT_ID     = '1000.WOOVSXCA33AC46TNVPW2TC7FEQAOUN';
-  const ZOHO_CLIENT_SECRET = 'a7ee1204fb9afa748e980817ab358983d41831c91e';
-  const ZOHO_REFRESH_TOKEN = '1000.16ed6042fccab4da0bef858f29698e03.c62e7578666e8f3f99456324c8c9b554';
-  const ZOHO_DOMAIN        = 'desk.zoho.com';
-  const ZOHO_ACCOUNTS      = 'accounts.zoho.com';
-  const DEPT_NAME          = 'SAC';
-  const CFG_KEY            = 'neosolar_sac_cfg';
-
-  let accessToken  = null;
-  let tokenExpires = 0;
-  let orgId        = null;
-  let deptId       = null;
-
-  // ─── VIEWS ──────────────────────────────────────────────────────────────────
-  const views = ['viewConfig','viewLoading','viewError','viewDash'];
-  function show(id) { views.forEach(v => document.getElementById(v).style.display = v===id ? '' : 'none'); }
-
-  function showConfig() {
-    show('viewConfig');
-    const cfg = getSavedCfg();
-    if (cfg) {
-      document.getElementById('cfgOrgId').value  = cfg.orgId  || '';
-      document.getElementById('cfgApiKey').value = '';
-      document.getElementById('cfgDomain').value = cfg.domain || ZOHO_DOMAIN;
-    }
-  }
-
-  function saveConfig() {
-    const inputOrgId = document.getElementById('cfgOrgId').value.trim();
-    if (!inputOrgId) { alert('Preencha o Org ID.'); return; }
-    localStorage.setItem(CFG_KEY, JSON.stringify({ orgId: inputOrgId }));
-    orgId = inputOrgId;
-    loadData();
-  }
+  // ─── CONFIG ──────────────────────────────────────────────────────────────────
+  const DEPT_NAME = 'SAC';
+  const CFG_KEY   = 'neosolar_sac_cfg';
 
   function getSavedCfg() {
     try { return JSON.parse(localStorage.getItem(CFG_KEY)); } catch(e) { return null; }
   }
 
-  // ─── ACCESS TOKEN (OAuth 2.0) ─────────────────────────────────────────────
-  async function getAccessToken() {
-    if (accessToken && Date.now() < tokenExpires - 60000) return accessToken;
-    const params = new URLSearchParams({
-      refresh_token: ZOHO_REFRESH_TOKEN,
-      client_id:     ZOHO_CLIENT_ID,
-      client_secret: ZOHO_CLIENT_SECRET,
-      grant_type:    'refresh_token'
-    });
-    const res = await fetch(`https://${ZOHO_ACCOUNTS}/oauth/v2/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: params
-    });
-    const data = await res.json();
-    if (!data.access_token) throw new Error('Falha ao obter access token: ' + (data.error || JSON.stringify(data)));
-    accessToken  = data.access_token;
-    tokenExpires = Date.now() + (data.expires_in || 3600) * 1000;
-    return accessToken;
+  // ─── VIEWS ──────────────────────────────────────────────────────────────────
+  const views = ['viewConfig','viewLoading','viewError','viewDash'];
+  function show(id) { views.forEach(v => document.getElementById(v).style.display = v===id ? '' : 'none'); }
+
+  function showConfig() { show('viewConfig'); }
+
+  function saveConfig() {
+    show('viewLoading');
+    loadData();
   }
 
-  // ─── ZOHO API ────────────────────────────────────────────────────────────────
+  // ─── PROXY API ───────────────────────────────────────────────────────────────
   async function zoho(path, params = {}) {
-    const token = await getAccessToken();
-    const qs = new URLSearchParams({ ...params, limit: params.limit || 100 }).toString();
-    const url = `https://${ZOHO_DOMAIN}/api/v1/${path}?${qs}`;
-    const res = await fetch(url, {
-      headers: {
-        'orgId': orgId,
-        'Authorization': `Zoho-oauthtoken ${token}`
-      }
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status} em ${path}`);
+    const qs = new URLSearchParams({ path, ...params }).toString();
+    const res = await fetch(`/api/zoho?${qs}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
     return res.json();
   }
 
   // ─── BUSCAR DEPT ID DO SAC ────────────────────────────────────────────────
+  let deptId = null;
   async function getDeptId() {
     if (deptId) return deptId;
     const data = await zoho('departments', { limit: 50 });
     const depts = data.data || [];
     const sac = depts.find(d => d.name && d.name.toUpperCase() === DEPT_NAME.toUpperCase());
-    if (!sac) throw new Error(`Departamento "${DEPT_NAME}" não encontrado. Departamentos disponíveis: ${depts.map(d=>d.name).join(', ')}`);
+    if (!sac) throw new Error(`Departamento "${DEPT_NAME}" não encontrado. Disponíveis: ${depts.map(d=>d.name).join(', ')}`);
     deptId = sac.id;
     return deptId;
   }
 
   // ─── LOAD DATA ────────────────────────────────────────────────────────────────
   async function loadData() {
-    const cfg = getSavedCfg();
-    if (!cfg || !cfg.orgId) { showConfig(); return; }
-    orgId = cfg.orgId;
     show('viewLoading');
     try {
       const dept = await getDeptId();
@@ -520,8 +472,7 @@
       document.getElementById('liveBadge').style.display = 'flex';
       show('viewDash');
     } catch(err) {
-      document.getElementById('errorMsg').textContent =
-        `Erro: ${err.message}`;
+      document.getElementById('errorMsg').textContent = `Erro: ${err.message}`;
       show('viewError');
     }
   }
@@ -715,18 +666,10 @@
   }
 
   // ─── INIT ─────────────────────────────────────────────────────────────────────
-  const _cfg = getSavedCfg();
-  if (_cfg && _cfg.orgId) {
-    orgId = _cfg.orgId;
-    loadData();
-  } else {
-    showConfig();
-  }
+  loadData();
 
   // Auto-refresh a cada 5 minutos
-  setInterval(() => {
-    if (orgId) loadData();
-  }, 5 * 60 * 1000);
+  setInterval(loadData, 5 * 60 * 1000);
 </script>
 </body>
 </html>

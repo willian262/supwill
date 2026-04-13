@@ -1,17 +1,6 @@
 {
-  "rewrites": [
-    {
-      "source": "/zoho-api/:path*",
-      "destination": "https://desk.zoho.com/api/v1/:path*"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" }
-      ]
-    }
-  ]
+  "functions": {
+    "api/zoho.js":  { "memory": 256, "maxDuration": 10 },
+    "api/token.js": { "memory": 128, "maxDuration": 10 }
+  }
 }

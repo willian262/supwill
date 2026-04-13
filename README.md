@@ -2,7 +2,7 @@
 
 Dashboard para acompanhamento de tickets do Zoho Desk em tempo real.
 
-## Como fazer o deploy no Vercel
+## Como fazer o deploy no Vercelll
 
 ### 1. Pré-requisito
 Crie uma conta gratuita em https://vercel.com (pode entrar com GitHub, Google ou e-mail).

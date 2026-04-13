@@ -452,11 +452,10 @@
     try {
       const dept = await getDeptId();
 
-      const [openData, pendData, resolvedData, agentsData] = await Promise.all([
+      const [openData, pendData, resolvedData] = await Promise.all([
         zoho('tickets', { statusType: 'Open'   }),
         zoho('tickets', { statusType: 'On Hold' }),
-        zoho('tickets', { statusType: 'Closed' }),
-        zoho('agents',  { limit: 100 })
+        zoho('tickets', { statusType: 'Closed' })
       ]);
 
       const open      = openData.data     || [];
@@ -465,11 +464,21 @@
       const resolved  = resolvedData.data || [];
       const allActive = [...open, ...pending];
 
-      // Mapa assigneeId -> nome
+      // Busca todos os agentes com paginação
       const agentNames = {};
-      (agentsData.data || []).forEach(a => {
-        agentNames[a.id] = (a.firstName + ' ' + (a.lastName || '')).trim() || a.name || a.emailAddress || a.id;
-      });
+      let agFrom = 1;
+      while (true) {
+        const agPage = await zoho('agents', { limit: 100, from: agFrom });
+        const agBatch = agPage.data || [];
+        agBatch.forEach(a => {
+          const fn = (a.firstName||'').trim();
+          const ln = (a.lastName||'').trim();
+          agentNames[a.id] = fn ? (ln ? fn+' '+ln : fn) : (a.name||'').trim() || a.emailAddress || a.id;
+        });
+        if (agBatch.length < 100) break;
+        agFrom += 100;
+        if (agFrom > 500) break; // segurança
+      }
 
       renderDash({ open, pending, escalated, resolved, allActive, agentNames });
 

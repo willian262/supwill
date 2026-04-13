@@ -1,4 +1,3 @@
-// Cache do token em memória — evita chamar a Zoho a cada requisição
 let _cachedToken = null;
 let _tokenExpires = 0;
 
@@ -31,6 +30,8 @@ export default async function handler(req, res) {
   const { path, ...params } = req.query;
   if (!path) return res.status(400).json({ error: 'path obrigatório' });
 
+  const { departmentId, ...zohoParams } = params;
+
   let accessToken;
   try {
     accessToken = await getAccessToken();
@@ -39,7 +40,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const qs = new URLSearchParams({ ...params, limit: params.limit || '100' }).toString();
+    const qs = new URLSearchParams({ ...zohoParams, limit: zohoParams.limit || '100' }).toString();
     const url = `https://desk.zoho.com/api/v1/${path}?${qs}`;
     const zohoRes = await fetch(url, {
       headers: {
@@ -47,7 +48,24 @@ export default async function handler(req, res) {
         'Authorization': `Zoho-oauthtoken ${accessToken}`
       }
     });
-    const data = await zohoRes.json();
+
+    const text = await zohoRes.text();
+    if (!text || text.trim() === '') {
+      return res.status(200).json({ data: [], count: 0 });
+    }
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch(e) {
+      return res.status(200).json({ data: [], count: 0, _raw: text.substring(0, 200) });
+    }
+
+    if (departmentId && data.data && Array.isArray(data.data)) {
+      data.data = data.data.filter(t => t.departmentId === departmentId);
+      data.count = data.data.length;
+    }
+
     return res.status(zohoRes.status).json(data);
   } catch (err) {
     return res.status(500).json({ error: 'Erro ao chamar Zoho: ' + err.message });

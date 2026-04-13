@@ -452,16 +452,16 @@
     try {
       const dept = await getDeptId();
 
-      const [openData, pendData, escData, resolvedData] = await Promise.all([
-        zoho('tickets', { status: 'Open',      departmentId: dept, limit: 100 }),
-        zoho('tickets', { status: 'On Hold',   departmentId: dept, limit: 100 }),
-        zoho('tickets', { status: 'Escalated', departmentId: dept, limit: 50  }),
-        zoho('tickets', { status: 'Closed',    departmentId: dept, limit: 100 })
+      const [openData, pendData, resolvedData] = await Promise.all([
+        zoho('tickets', { statusType: 'Open',   departmentId: dept, limit: 100 }),
+        zoho('tickets', { statusType: 'OnHold', departmentId: dept, limit: 100 }),
+
+        zoho('tickets', { statusType: 'Closed', departmentId: dept, limit: 100 })
       ]);
 
       const open      = openData.data     || [];
       const pending   = pendData.data     || [];
-      const escalated = escData.data      || [];
+      const escalated = open.filter(t => t.priority === 'Vencido');
       const resolved  = resolvedData.data || [];
       const allActive = [...open, ...pending, ...escalated];
 

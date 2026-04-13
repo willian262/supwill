@@ -453,10 +453,9 @@
       const dept = await getDeptId();
 
       const [openData, pendData, resolvedData] = await Promise.all([
-        zoho('tickets', { statusType: 'Open',   departmentId: dept, limit: 100 }),
-        zoho('tickets', { statusType: 'OnHold', departmentId: dept, limit: 100 }),
-
-        zoho('tickets', { statusType: 'Closed', departmentId: dept, limit: 100 })
+        zoho('tickets', { statusType: 'Open'   }),
+        zoho('tickets', { statusType: 'OnHold' }),
+        zoho('tickets', { statusType: 'Closed' })
       ]);
 
       const open      = openData.data     || [];

@@ -57,6 +57,8 @@
     #viewLoading.active,#viewError.active { display:flex; }
     #viewDash { display:none; }
     #viewDash.active { display:block; }
+    #viewDash .tab-panel { display:none; }
+    #viewDash .tab-panel.active { display:block; }
     .loading-screen { flex-direction:column; align-items:center; justify-content:center; min-height:calc(100vh - 52px); gap:18px; }
     .loader-ring { width:44px; height:44px; border:2px solid var(--border); border-top-color:var(--yellow); border-radius:50%; animation:spin .8s linear infinite; }
     .loading-label { font-family:'Barlow Condensed',sans-serif; font-size:11px; letter-spacing:4px; text-transform:uppercase; color:var(--subtle); }
@@ -268,7 +270,7 @@
 </div>
 
 <!-- DASHBOARD -->
-<div class="tab-panel active" id="tabPanelZoho"><div class="dash" id="viewDash">
+<div id="viewDash"><div class="tab-panel active" id="tabPanelZoho"><div class="dash">
 
   <!-- KPIs -->
   <div class="kpi-strip">
@@ -518,6 +520,7 @@
   </div>
 
   </div></div><!-- fim tab Neppo -->
+</div><!-- fim viewDash -->
 
 <script>
   // ── Logo embutido (base64 carregado inline) ──
@@ -568,7 +571,7 @@
   }
 
   async function loadData() {
-    function switchTab(tab) {
+  function switchTab(tab) {
     document.getElementById('tabPanelZoho').classList.toggle('active', tab === 'zoho');
     document.getElementById('tabPanelNeppo').classList.toggle('active', tab === 'neppo');
     document.getElementById('tabZoho').classList.toggle('active', tab === 'zoho');

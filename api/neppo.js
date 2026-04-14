@@ -133,11 +133,11 @@ export default async function handler(req, res) {
     }
 
     if (path === 'debug') {
-      // Tenta filtrar direto pela API com groupConf.name LIKE SAC
+      // Tenta filtrar por operationName = Sac
       const data = await neppoPost('/chatapi/1.0/api/user-session', {
         conditions: [
           { key: 'status', value: 'CLOSED', operator: 'NEQ', logic: 'AND' },
-          { key: 'groupConf.name', value: 'SAC', operator: 'LIKE', logic: 'AND' }
+          { key: 'groupConf.operation.operationName', value: 'Sac', operator: 'EQ', logic: 'AND' }
         ],
         sort: false, page: 0, size: 10
       }, token);

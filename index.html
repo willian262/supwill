@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NeoSolar — Painel Pós-Venda</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <style>
     :root {
@@ -316,6 +317,26 @@
     </div>
   </div>
 
+  <!-- GRÁFICO 30 DIAS -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Fluxo Diário — Últimos 30 Dias</span>
+      <div style="display:flex;align-items:center;gap:16px">
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
+          <div style="width:10px;height:10px;border-radius:2px;background:var(--yellow)"></div>Abertos
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
+          <div style="width:10px;height:10px;border-radius:2px;background:var(--green)"></div>Fechados
+        </div>
+        <span class="card-badge" id="fluxoBadge">carregando...</span>
+      </div>
+    </div>
+    <div style="padding:16px 18px">
+      <canvas id="fluxoChart" height="100"></canvas>
+      <div id="fluxoEmpty" class="no-data" style="display:none">Carregando dados...</div>
+    </div>
+  </div>
+
   <!-- TOP 5 CLASSIFICAÇÃO -->
   <div class="card">
     <div class="card-head">
@@ -411,6 +432,8 @@
 
       // Classificações em background — lento e seguro (5 por vez, pausa de 2s)
       loadClassifications(all).catch(()=>{});
+      // Gráfico de fluxo em background
+      loadFluxo(all).catch(()=>{});
 
     } catch(err) {
       document.getElementById('errorMsg').textContent = `Erro: ${err.message}`;
@@ -626,6 +649,118 @@
     // Atualiza KPI top categoria se existir
     if (entries.length>0) {
       // Pode adicionar depois
+    }
+  }
+
+  // ── Gráfico de fluxo 30 dias ──
+  async function loadFluxo(allActive) {
+    try {
+      // Busca tickets fechados dos últimos 30 dias
+      const closedData = await zoho('tickets', { mode: 'closed30' });
+      const closed = closedData.data || [];
+
+      // Monta mapa dos últimos 30 dias
+      const days = [];
+      const hoje = new Date();
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(hoje);
+        d.setDate(hoje.getDate() - i);
+        days.push(d.toISOString().slice(0,10));
+      }
+
+      const abertos  = {};
+      const fechados = {};
+      days.forEach(d => { abertos[d] = 0; fechados[d] = 0; });
+
+      // Conta abertos por dia de criação
+      allActive.forEach(t => {
+        const d = (t.createdTime||'').slice(0,10);
+        if (abertos[d] !== undefined) abertos[d]++;
+      });
+      closed.forEach(t => {
+        const d = (t.createdTime||'').slice(0,10);
+        if (abertos[d] !== undefined) abertos[d]++;
+      });
+
+      // Conta fechados por dia de modificação
+      closed.forEach(t => {
+        const d = (t.modifiedTime||'').slice(0,10);
+        if (fechados[d] !== undefined) fechados[d]++;
+      });
+
+      const labels   = days.map(d => { const dt=new Date(d+'T12:00:00'); return dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}); });
+      const aData    = days.map(d => abertos[d]);
+      const fData    = days.map(d => fechados[d]);
+      const saldoTotal = fData.reduce((s,v)=>s+v,0) - aData.reduce((s,v)=>s+v,0);
+
+      document.getElementById('fluxoBadge').textContent =
+        saldoTotal >= 0 ? `+${saldoTotal} fechados no período` : `${saldoTotal} saldo no período`;
+      document.getElementById('fluxoBadge').className =
+        'card-badge ' + (saldoTotal >= 0 ? 'ok' : 'danger');
+
+      // Destroi chart anterior se existir
+      if (window._fluxoChart) window._fluxoChart.destroy();
+
+      const ctx = document.getElementById('fluxoChart').getContext('2d');
+      window._fluxoChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Abertos',
+              data: aData,
+              backgroundColor: 'rgba(255,208,76,0.7)',
+              borderColor: '#FFD04C',
+              borderWidth: 1,
+              borderRadius: 3,
+            },
+            {
+              label: 'Fechados',
+              data: fData,
+              backgroundColor: 'rgba(94,201,135,0.7)',
+              borderColor: '#5ec987',
+              borderWidth: 1,
+              borderRadius: 3,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#202020',
+              borderColor: 'rgba(255,255,255,0.1)',
+              borderWidth: 1,
+              titleColor: '#f0ede8',
+              bodyColor: '#888580',
+              callbacks: {
+                afterBody: (items) => {
+                  const a = items.find(i=>i.dataset.label==='Abertos')?.parsed.y||0;
+                  const f = items.find(i=>i.dataset.label==='Fechados')?.parsed.y||0;
+                  const s = f - a;
+                  return `Saldo: ${s >= 0 ? '+' : ''}${s}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(255,255,255,0.04)' },
+              ticks: { color: '#888580', font: { size: 10 } }
+            },
+            y: {
+              grid: { color: 'rgba(255,255,255,0.04)' },
+              ticks: { color: '#888580', font: { size: 10 }, stepSize: 5 },
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    } catch(e) {
+      document.getElementById('fluxoBadge').textContent = 'erro ao carregar';
     }
   }
 

@@ -105,7 +105,7 @@
     .health-ticket-days { font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; white-space:nowrap; flex-shrink:0; }
 
     /* ── STATUS LIST ── */
-    .status-list { display:flex; flex-direction:column; }
+    .status-list { display:flex; flex-direction:column; max-height:380px; overflow-y:auto; }
     .status-row { display:flex; align-items:center; padding:9px 16px; border-bottom:1px solid var(--border); gap:8px; }
     .status-row:last-child { border-bottom:none; }
     .status-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
@@ -335,7 +335,7 @@
       </div>
     </div>
     <div style="padding:16px 18px">
-      <canvas id="fluxoChart" height="100"></canvas>
+      <canvas id="fluxoChart" height="60"></canvas>
       <div id="fluxoEmpty" class="no-data" style="display:none">Carregando dados...</div>
     </div>
   </div>
@@ -550,7 +550,7 @@
     // ── Status distribution ──
     const sCnt = {};
     all.forEach(t => { sCnt[t.status]=(sCnt[t.status]||0)+1; });
-    const top = Object.entries(sCnt).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const top = Object.entries(sCnt).sort((a,b)=>b[1]-a[1]);
     const maxS = Math.max(...top.map(s=>s[1]),1);
     document.getElementById('statusList').innerHTML = top.map(([n,c],i) => `
       <div class="status-row">

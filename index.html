@@ -588,7 +588,7 @@
     // Top categoria
     const catCount = {};
     allActive.forEach(t => {
-      if (t.category) catCount[t.category] = (catCount[t.category]||0)+1;
+      if (t.classification) catCount[t.classification] = (catCount[t.classification]||0)+1;
     });
     const topCat = Object.entries(catCount).sort((a,b)=>b[1]-a[1]);
     if (topCat.length > 0) {
@@ -679,15 +679,16 @@
     // Classificação / Subclassificação
     const classMap = {};
     allActive.forEach(t => {
-      const cat = t.category || '(sem classificação)';
-      const sub = t.subCategory || '(sem subclassificação)';
-      const key = cat + '|||' + sub;
+      const cat = t.classification || null;
+      const sub = (t.cf && t.cf.cf_sub_classificacao) || null;
+      if (!cat) return; // ignora sem classificação
+      const key = cat + '|||' + (sub || '—');
       classMap[key] = (classMap[key]||0) + 1;
     });
     const classEntries = Object.entries(classMap)
       .map(([k,v]) => { const [cat,sub]=k.split('|||'); return {cat,sub,count:v}; })
       .sort((a,b)=>b.count-a.count);
-    const classWithData = classEntries.filter(e => e.cat !== '(sem classificação)');
+    const classWithData = classEntries;
     const top5 = classWithData.slice(0,5);
     const totalClass = classWithData.reduce((s,e)=>s+e.count,0);
     document.getElementById('classTotal').textContent = `${totalClass} classificados`;

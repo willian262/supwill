@@ -127,6 +127,22 @@ export default async function handler(req, res) {
       return res.status(200).json(data);
     }
 
+    if (path === 'debug') {
+      // Mostra campos relevantes das primeiras 5 sessões
+      const data = await neppoPost('/chatapi/1.0/api/user-session', {
+        conditions: [], sort: false, page: 0, size: 5
+      }, token);
+      const preview = (data.results || []).map(s => ({
+        id: s.id,
+        operationName: s.operationName,
+        groupName: s.groupName,
+        status: s.status,
+        agentProfile: s.agent?.profile?.name,
+        agentName: s.agent?.displayName,
+      }));
+      return res.status(200).json({ total: data.size, preview });
+    }
+
     // Debug genérico
     const data = await neppoPost(`/chatapi/1.0/api/${path}`, {
       conditions: [], sort: false, page: 0, size: 5

@@ -148,6 +148,41 @@
 
     .no-data { text-align:center; padding:28px 16px; font-family:'Barlow Condensed',sans-serif; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--subtle); }
 
+    /* ── PÓDIO ── */
+    .podium-wrap { display:flex; align-items:flex-end; justify-content:center; gap:16px; }
+    .podium-place { display:flex; flex-direction:column; align-items:center; gap:10px; flex:1; max-width:200px; }
+    .podium-photo-wrap { position:relative; }
+    .podium-photo {
+      width:72px; height:72px; border-radius:50%;
+      object-fit:cover;
+      border:3px solid var(--border);
+    }
+    .podium-photo.p1 { width:88px; height:88px; border-color:var(--yellow); box-shadow:0 0 20px rgba(255,208,76,0.3); }
+    .podium-photo.p2 { border-color:#94a3b8; }
+    .podium-photo.p3 { border-color:var(--orange); }
+    .podium-initials {
+      width:72px; height:72px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-family:'Barlow Condensed',sans-serif;
+      font-size:24px; font-weight:800;
+      border:3px solid var(--border);
+    }
+    .podium-initials.p1 { width:88px; height:88px; font-size:28px; border-color:var(--yellow); box-shadow:0 0 20px rgba(255,208,76,0.3); background:#2a1f10; color:var(--yellow); }
+    .podium-initials.p2 { border-color:#94a3b8; background:#1a1e26; color:#94a3b8; }
+    .podium-initials.p3 { border-color:var(--orange); background:#201510; color:var(--orange); }
+    .podium-medal { position:absolute; bottom:-4px; right:-4px; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; border:2px solid var(--bg); }
+    .podium-name { font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700; text-align:center; }
+    .podium-count { font-family:'Barlow Condensed',sans-serif; font-size:36px; font-weight:800; line-height:1; }
+    .podium-count.p1 { font-size:48px; color:var(--yellow); }
+    .podium-count.p2 { color:#94a3b8; }
+    .podium-count.p3 { color:var(--orange); }
+    .podium-label { font-size:10px; color:var(--muted); letter-spacing:1px; text-transform:uppercase; }
+    .podium-bar { width:100%; border-radius:6px 6px 0 0; min-height:20px; transition:height .5s; }
+    .podium-base { width:100%; border-radius:6px; overflow:hidden; }
+    .podium-base.p1 { background:rgba(255,208,76,0.08); border:1px solid var(--border-y); }
+    .podium-base.p2 { background:rgba(148,163,184,0.06); border:1px solid rgba(148,163,184,0.15); }
+    .podium-base.p3 { background:rgba(240,122,48,0.06); border:1px solid rgba(240,122,48,0.15); }
+
     /* scrollbar */
     ::-webkit-scrollbar { width:4px; height:4px; }
     ::-webkit-scrollbar-track { background:transparent; }
@@ -263,6 +298,17 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- PÓDIO DO DIA -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">🏆 Pódio do Dia — Tickets Fechados Hoje</span>
+      <span class="card-badge" id="podiumDate">hoje</span>
+    </div>
+    <div id="podiumContent" style="padding:20px 18px">
+      <div class="no-data">Calculando...</div>
+    </div>
   </div>
 
   <!-- SAÚDE DA OPERAÇÃO -->
@@ -423,9 +469,11 @@
 
       // Mapa agentes
       const agentNames = {};
+      const agentPhotos = {};
       const mapAgent = a => {
         const fn=(a.firstName||'').trim(), ln=(a.lastName||'').trim();
         agentNames[a.id] = fn?(ln?fn+' '+ln:fn):(a.name||'').trim()||a.id;
+        if (a.photoURL) agentPhotos[a.id] = a.photoURL;
       };
       (agentsData.data||[]).forEach(mapAgent);
       if ((agentsData.data||[]).length===100) {
@@ -436,7 +484,7 @@
         }
       }
 
-      renderDash(all, agentNames);
+      renderDash(all, agentNames, agentPhotos);
 
       document.getElementById('lastUpdate').textContent =
         'ATUALIZADO ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
@@ -446,7 +494,7 @@
       // Classificações em background — lento e seguro (5 por vez, pausa de 2s)
       loadClassifications(all).catch(()=>{});
       // Gráfico de fluxo em background
-      loadFluxo(all).catch(()=>{});
+      loadFluxo(all, agentNames, agentPhotos).catch(()=>{});
 
     } catch(err) {
       document.getElementById('errorMsg').textContent = `Erro: ${err.message}`;
@@ -456,7 +504,7 @@
     }
   }
 
-  function renderDash(all, agentNames) {
+  function renderDash(all, agentNames, agentPhotos={}) {
     const now = Date.now();
     const COLORS = ['var(--yellow)','var(--orange)','var(--purple)','var(--cyan)','var(--green)','var(--red)','#f9a8d4','#94a3b8'];
 
@@ -476,6 +524,22 @@
     setEl('mParadosWarnSub', parados3.length>0?'monitorar de perto':'nenhum em atenção', parados3.length>0?'warn':'ok');
     setEl('mHoje', hoje.length, 'ok');
     setEl('mHojeSub', `${Math.round(hoje.length/all.length*100)}% do total em dia`);
+
+    // ── Pódio do dia ──
+    const todayStr = new Date().toISOString().slice(0,10);
+    // Busca tickets fechados hoje pelo closedTime ou modifiedTime + status fechado
+    const CLOSED_STATUS = ['Fechado','Fechado Inatividade'];
+    // Como não temos closedTime na lista, usamos modifiedTime de hoje com status fechado
+    // Mas na lista atual só temos ativos — usamos os dados do gráfico quando disponível
+    // Por ora, mostramos pódio baseado nos fechados de hoje do fluxo (carrega em background)
+    document.getElementById('podiumDate').textContent =
+      new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+    // Pódio calculado quando fluxo carregar — placeholder por enquanto
+    if (!window._podiumRendered) {
+      document.getElementById('podiumContent').innerHTML =
+        '<div class="no-data" style="color:var(--muted)">Aguardando dados de fechamento...</div>';
+    }
 
     // ── Times ──
     const VICTOR_ID = '365059000020303001';
@@ -666,7 +730,7 @@
   }
 
   // ── Gráfico de fluxo 30 dias ──
-  async function loadFluxo(allActive) {
+  async function loadFluxo(allActive, agentNames={}, agentPhotos={}) {
     try {
       // Busca tickets fechados dos últimos 30 dias
       const closedData = await zoho('tickets', { mode: 'closed30' });
@@ -709,6 +773,66 @@
       const saldoEl = document.getElementById('fluxoBadge');
       saldoEl.textContent = saldoTotal >= 0 ? `+${saldoTotal}` : `${saldoTotal}`;
       saldoEl.style.color = saldoTotal >= 0 ? 'var(--green)' : 'var(--red)';
+
+      // ── Pódio do dia ──
+      const todayStr2 = new Date().toISOString().slice(0,10);
+      const fechadosHoje = closed.filter(t => (t.modifiedTime||'').slice(0,10) === todayStr2);
+      const podiumMap = {};
+      fechadosHoje.forEach(t => {
+        if (!t.assigneeId) return;
+        podiumMap[t.assigneeId] = (podiumMap[t.assigneeId]||0) + 1;
+      });
+      const podiumRank = Object.entries(podiumMap)
+        .map(([id,cnt]) => ({id, cnt, name: agentNames[id]||'#'+id.slice(-4), photo: agentPhotos[id]||null}))
+        .sort((a,b) => b.cnt - a.cnt)
+        .slice(0,3);
+
+      const MEDALS = ['🥇','🥈','🥉'];
+      const PCLS   = ['p1','p2','p3'];
+      const PCOLORS= ['var(--yellow)','#94a3b8','var(--orange)'];
+
+      // Reordena para pódio visual: 2º, 1º, 3º
+      const order = podiumRank.length >= 3
+        ? [podiumRank[1], podiumRank[0], podiumRank[2]]
+        : podiumRank.length === 2
+        ? [podiumRank[1], podiumRank[0]]
+        : podiumRank;
+      const visualIdx = podiumRank.length >= 3 ? [1,0,2] : podiumRank.length === 2 ? [1,0] : [0];
+
+      if (podiumRank.length === 0) {
+        document.getElementById('podiumContent').innerHTML =
+          '<div class="no-data">Nenhum ticket fechado hoje ainda</div>';
+      } else {
+        const maxH = 80;
+        document.getElementById('podiumContent').innerHTML = `
+          <div class="podium-wrap">
+            ${order.map((agent, vi) => {
+              const rank = visualIdx[vi];
+              const cls  = PCLS[rank];
+              const pct  = Math.round(agent.cnt / podiumRank[0].cnt * 100);
+              const barH = Math.max(20, Math.round(pct / 100 * maxH));
+              const init = agent.name.split(' ').filter(Boolean).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+              const photoEl = agent.photo
+                ? `<img src="${agent.photo}" class="podium-photo ${cls}" alt="${agent.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+                : '';
+              const initialsEl = `<div class="podium-initials ${cls}" style="${agent.photo?'display:none':''}">${init}</div>`;
+              return `
+                <div class="podium-place">
+                  <div class="podium-count ${cls}">${agent.cnt}</div>
+                  <div class="podium-label">fechados</div>
+                  <div class="podium-photo-wrap">
+                    ${photoEl}${initialsEl}
+                    <div class="podium-medal" style="background:${PCOLORS[rank]}">${MEDALS[rank]}</div>
+                  </div>
+                  <div class="podium-name">${agent.name.split(' ')[0]}</div>
+                  <div class="podium-base ${cls}">
+                    <div class="podium-bar" style="height:${barH}px;background:${PCOLORS[rank]};opacity:0.3"></div>
+                  </div>
+                </div>`;
+            }).join('')}
+          </div>`;
+        window._podiumRendered = true;
+      }
 
       // Destroi chart anterior se existir
       if (window._fluxoChart) window._fluxoChart.destroy();

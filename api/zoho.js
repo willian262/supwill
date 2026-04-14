@@ -80,6 +80,37 @@ export default async function handler(req, res) {
     const CLOSED   = ['Fechado', 'Fechado Inatividade'];
     const LIMIT    = 100;
 
+    // Endpoint especial: busca tickets fechados dos últimos 30 dias
+    if (params.mode === 'closed30') {
+      const since = new Date(Date.now() - 30 * 24 * 3600000).toISOString();
+      let closedTickets = [];
+      let from = 1;
+      while (from <= 3000) {
+        const froms = [];
+        for (let i = 0; i < 10 && (from + i * LIMIT) <= 3000; i++) froms.push(from + i * LIMIT);
+        const results = await Promise.all(
+          froms.map(f => zohoRequest('tickets', {
+            from: f, limit: LIMIT,
+            fields: 'id,ticketNumber,subject,status,statusType,departmentId,createdTime,modifiedTime,classification'
+          }, accessToken))
+        );
+        let gotAny = false;
+        for (const r of results) {
+          const batch = (r.data || []).filter(t =>
+            t.departmentId === SAC_DEPT &&
+            CLOSED.includes(t.status) &&
+            t.modifiedTime >= since
+          );
+          if ((r.data||[]).length > 0) gotAny = true;
+          closedTickets = closedTickets.concat(batch);
+        }
+        if (!gotAny) break;
+        from += froms.length * LIMIT;
+      }
+      closedTickets.sort((a,b) => new Date(b.modifiedTime) - new Date(a.modifiedTime));
+      return res.status(200).json({ data: closedTickets, count: closedTickets.length });
+    }
+
     // Busca paralela em lotes de 20
     let allTickets = [];
     let from = 1;

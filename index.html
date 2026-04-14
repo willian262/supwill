@@ -259,6 +259,31 @@
     </div>
   </div>
 
+  <!-- GRÁFICO 30 DIAS -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Fluxo Diário — Últimos 30 Dias</span>
+      <div style="display:flex;align-items:center;gap:20px">
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
+          <div style="width:10px;height:10px;border-radius:2px;background:var(--yellow)"></div>Abertos
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
+          <div style="width:10px;height:10px;border-radius:2px;background:var(--green)"></div>Fechados
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 14px;min-width:90px">
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Saldo 30d</span>
+          <span id="fluxoBadge" style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;line-height:1.1">—</span>
+        </div>
+      </div>
+    </div>
+    <div style="padding:16px 18px">
+      <canvas id="fluxoChart" height="60"></canvas>
+      <div id="fluxoEmpty" class="no-data" style="display:none">Carregando dados...</div>
+    </div>
+  </div>
+
+
+
   <!-- TIMES -->
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
 
@@ -362,31 +387,6 @@
       <div class="agent-list" id="agentRows"></div>
     </div>
   </div>
-
-  <!-- GRÁFICO 30 DIAS -->
-  <div class="card">
-    <div class="card-head">
-      <span class="card-title">Fluxo Diário — Últimos 30 Dias</span>
-      <div style="display:flex;align-items:center;gap:20px">
-        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
-          <div style="width:10px;height:10px;border-radius:2px;background:var(--yellow)"></div>Abertos
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
-          <div style="width:10px;height:10px;border-radius:2px;background:var(--green)"></div>Fechados
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 14px;min-width:90px">
-          <span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Saldo 30d</span>
-          <span id="fluxoBadge" style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;line-height:1.1">—</span>
-        </div>
-      </div>
-    </div>
-    <div style="padding:16px 18px">
-      <canvas id="fluxoChart" height="60"></canvas>
-      <div id="fluxoEmpty" class="no-data" style="display:none">Carregando dados...</div>
-    </div>
-  </div>
-
-
 
 </div>
 
@@ -729,20 +729,23 @@
       const fechados = {};
       days.forEach(d => { abertos[d] = 0; fechados[d] = 0; });
 
-      // Conta abertos por dia de criação
+      // Conta abertos por dia de criação (horário BR)
+      const toBR = s => s ? new Date(new Date(s).getTime() - 3*3600000).toISOString().slice(0,10) : null;
       allActive.forEach(t => {
-        const d = (t.createdTime||'').slice(0,10);
-        if (abertos[d] !== undefined) abertos[d]++;
+        const d = toBR(t.createdTime);
+        if (d && abertos[d] !== undefined) abertos[d]++;
       });
       closed.forEach(t => {
-        const d = (t.createdTime||'').slice(0,10);
-        if (abertos[d] !== undefined) abertos[d]++;
+        const d = toBR(t.createdTime);
+        if (d && abertos[d] !== undefined) abertos[d]++;
       });
 
-      // Conta fechados por dia de modificação
+      // Conta fechados por closedTime no horário de Brasília (UTC-3)
       closed.forEach(t => {
-        const d = (t.modifiedTime||'').slice(0,10);
-        if (fechados[d] !== undefined) fechados[d]++;
+        const ref = t.closedTime || t.modifiedTime;
+        if (!ref) return;
+        const dBR = new Date(new Date(ref).getTime() - 3 * 3600000).toISOString().slice(0,10);
+        if (fechados[dBR] !== undefined) fechados[dBR]++;
       });
 
       const labels   = days.map(d => { const dt=new Date(d+'T12:00:00'); return dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}); });

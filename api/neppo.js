@@ -8,29 +8,44 @@ let _neppoExpires = 0;
 async function getNeppoToken() {
   if (_neppoToken && Date.now() < _neppoExpires) return _neppoToken;
 
-  const basicAuth = Buffer.from(
-    `${process.env.NEPPO_CONSUMER_KEY}:${process.env.NEPPO_CONSUMER_SECRET}`
-  ).toString('base64');
+  // Tenta OAuth com api-auth
+  try {
+    const basicAuth = Buffer.from(
+      `${process.env.NEPPO_CONSUMER_KEY}:${process.env.NEPPO_CONSUMER_SECRET}`
+    ).toString('base64');
 
-  const res = await fetch(NEPPO_AUTH, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${basicAuth}`,
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    body: new URLSearchParams({
-      grant_type: 'password',
-      username:   process.env.NEPPO_USER,
-      password:   process.env.NEPPO_PASS
-    })
-  });
+    const res = await fetch(NEPPO_AUTH, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${basicAuth}`,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({
+        grant_type: 'password',
+        username:   process.env.NEPPO_USER,
+        password:   process.env.NEPPO_PASS
+      })
+    });
 
-  const data = await res.json();
-  if (!data.access_token) throw new Error('Token Neppo falhou: ' + JSON.stringify(data));
+    const data = await res.json();
+    if (data.access_token) {
+      _neppoToken   = data.access_token;
+      _neppoExpires = Date.now() + 50 * 60 * 1000;
+      return _neppoToken;
+    }
+  } catch(e) {
+    // OAuth falhou, tenta token fixo
+  }
 
-  _neppoToken   = data.access_token;
-  _neppoExpires = Date.now() + 50 * 60 * 1000; // 50 min
-  return _neppoToken;
+  // Fallback: usa token de acesso fixo das variáveis de ambiente
+  const fixedToken = process.env.NEPPO_ACCESS_TOKEN;
+  if (fixedToken) {
+    _neppoToken   = fixedToken;
+    _neppoExpires = Date.now() + 50 * 60 * 1000;
+    return _neppoToken;
+  }
+
+  throw new Error('Nenhum token Neppo disponível');
 }
 
 async function neppoPost(path, body, token) {

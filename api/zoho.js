@@ -91,7 +91,7 @@ export default async function handler(req, res) {
         const results = await Promise.all(
           froms.map(f => zohoRequest('tickets', {
             from: f, limit: LIMIT,
-            fields: 'id,ticketNumber,subject,status,statusType,departmentId,createdTime,modifiedTime,classification'
+            fields: 'id,ticketNumber,subject,status,statusType,departmentId,createdTime,modifiedTime,classification,assigneeId'
           }, accessToken))
         );
         let gotAny = false;

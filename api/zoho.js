@@ -15,7 +15,7 @@ async function getAccessToken() {
     body: tokenParams
   });
   const tokenData = await tokenRes.json();
-  if (!tokenData.access_token) throw new Error(JSON.stringify(tokenData));
+  if (!tokenData.access_token) throw new Error('Zoho retornou: ' + JSON.stringify(tokenData));
   _cachedToken  = tokenData.access_token;
   _tokenExpires = Date.now() + 55 * 60 * 1000;
   return _cachedToken;
@@ -48,7 +48,7 @@ export default async function handler(req, res) {
   try {
     accessToken = await getAccessToken();
   } catch (err) {
-    return res.status(401).json({ error: 'Falha ao obter token', detail: err.message });
+    return res.status(401).json({ error: 'Falha ao obter token', detail: err.message, hint: 'Verifique as variáveis de ambiente no Vercel' });
   }
 
   try {

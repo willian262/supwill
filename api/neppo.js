@@ -135,13 +135,12 @@ export default async function handler(req, res) {
     }
 
     if (path === 'debug') {
-      // Tenta filtrar por operationName = Sac
+      // Debug: sem filtro de status, apenas operação SAC
       const data = await neppoPost('/chatapi/1.0/api/user-session', {
         conditions: [
-          { key: 'status', value: 'CLOSED', operator: 'NEQ', logic: 'AND' },
           { key: 'groupConf.operation.operationName', value: 'Sac', operator: 'EQ', logic: 'AND' }
         ],
-        sort: false, page: 0, size: 10
+        sort: false, page: 0, size: 20
       }, token);
       const preview = (data.results || []).map(s => ({
         id: s.id,

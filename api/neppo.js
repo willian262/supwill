@@ -110,7 +110,7 @@ export default async function handler(req, res) {
       // Agentes — sem filtro de operationName (não existe nesse endpoint)
       const data = await neppoPost('/chatapi/1.0/api/agent', {
         conditions: [],
-        direction: 'ASC', sort: true, sortColumn: 'agentName',
+        sort: false,
         page: 0, size: 200
       }, token);
       return res.status(200).json(data);

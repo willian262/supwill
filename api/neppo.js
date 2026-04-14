@@ -77,8 +77,8 @@ export default async function handler(req, res) {
     if (path === 'dashboard') {
       // Busca todas as sessões ativas do SAC paginando
       const SAC_CONDITIONS = [
-        { key: 'status', value: 'CLOSED', operator: 'NEQ', logic: 'AND' },
-        { key: 'groupConf.operation.operationName', value: 'Sac', operator: 'EQ', logic: 'AND' }
+        { key: 'groupConf.operation.operationName', value: 'Sac', operator: 'EQ', logic: 'AND' },
+        { key: 'status', value: 'CLOSED', operator: 'NEQ', logic: 'AND' }
       ];
 
       let sac = [];
@@ -95,28 +95,37 @@ export default async function handler(req, res) {
         if (page > 20) break; // segurança
       }
 
-      // Status dos agentes únicos
+      // Status dos agentes únicos — ignora bots e sessões sem agente humano
+      // Remove apenas automações internas — mantém Bot SAC pois é fila de IA legítima
+      const BOT_KEYWORDS = ['pesquisa', '@botserver', 'csat', 'nps', 'inatividade', 'inicial padrão'];
+      const isBot = name => !name || BOT_KEYWORDS.some(k => (name||'').toLowerCase().includes(k));
+
       const agentMap = {};
       sac.forEach(s => {
-        const name = s.agent?.displayName || s.agent?.userName || 'Desconhecido';
-        const status = s.agent?.agent?.status || 'UNKNOWN';
+        const name = s.agent?.displayName || null;
+        if (isBot(name)) return; // ignora bots e sem agente
+        const agStatus = s.agent?.agent?.status || 'UNKNOWN';
         if (!agentMap[name]) {
-          agentMap[name] = { name, status, conversations: 0 };
+          agentMap[name] = { name, status: agStatus, conversations: 0, waiting: 0 };
         }
         agentMap[name].conversations++;
+        if (s.status === 'WAITING') agentMap[name].waiting++;
       });
 
       const agents = Object.values(agentMap).sort((a,b) => b.conversations - a.conversations);
 
-      // Contadores por status de agente
+      // Contadores
       const online   = agents.filter(a => a.status === 'ONLINE').length;
-      const paused   = agents.filter(a => a.status !== 'ONLINE' && a.status !== 'OFFLINE').length;
+      const paused   = agents.filter(a => !['ONLINE','OFFLINE'].includes(a.status)).length;
       const offline  = agents.filter(a => a.status === 'OFFLINE').length;
+      const waiting  = sac.filter(s => s.status === 'WAITING').length;
+      const inQueue  = sac.filter(s => isBot(s.agent?.displayName)).length;
 
       return res.status(200).json({
         totalConversations: sac.length,
         totalAgents: agents.length,
         online, paused, offline,
+        waiting, inQueue,
         agents
       });
     }

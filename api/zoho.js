@@ -123,7 +123,7 @@ export default async function handler(req, res) {
         froms.map(f => zohoRequest('tickets', {
           from: f,
           limit: LIMIT,
-          fields: 'id,ticketNumber,subject,status,statusType,priority,dueDate,assigneeId,departmentId,createdTime,modifiedTime,classification'
+          fields: 'id,ticketNumber,subject,status,statusType,priority,dueDate,assigneeId,departmentId,createdTime,modifiedTime,closedTime,classification'
         }, accessToken))
       );
       let gotAny = false;

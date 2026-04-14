@@ -89,7 +89,7 @@
     .card-badge.warn   { background:rgba(240,122,48,.12); color:var(--orange); border-color:rgba(240,122,48,.25); }
 
     /* ── SAÚDE DA OPERAÇÃO (3 colunas de parados) ── */
-    .health-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--border); }
+    .health-grid { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--border); }
     .health-col { background:var(--surface); padding:16px; }
     .health-col-header { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
     .health-indicator { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
@@ -217,7 +217,7 @@
       <div class="kpi-sub" id="mParadosWarnSub"></div>
     </div>
     <div class="kpi" style="--kpi-accent:var(--green)">
-      <div class="kpi-label">Movimentados Hoje</div>
+      <div class="kpi-label">Em dia — até 3 dias</div>
       <div class="kpi-value" id="mHoje">—</div>
       <div class="kpi-sub" id="mHojeSub"></div>
     </div>
@@ -230,16 +230,6 @@
       <span class="card-badge danger" id="healthBadge">0 em alerta</span>
     </div>
     <div class="health-grid">
-      <!-- Verde: até 3 dias -->
-      <div class="health-col">
-        <div class="health-col-header">
-          <div class="health-indicator" style="background:var(--green)"></div>
-          <span class="health-col-title" style="color:var(--green)">Em dia — até 3 dias</span>
-        </div>
-        <div class="health-col-count" style="color:var(--green)" id="hOkCount">—</div>
-        <div class="health-col-sub" id="hOkSub">tickets com movimentação recente</div>
-        <div class="health-ticket-list" id="hOkList"></div>
-      </div>
       <!-- Amarelo: 3–5 dias -->
       <div class="health-col">
         <div class="health-col-header">
@@ -400,7 +390,7 @@
     // ── KPIs de saúde ──
     const parados5  = all.filter(t => daysSince(t.modifiedTime) > 5);
     const parados3  = all.filter(t => daysSince(t.modifiedTime) > 3 && daysSince(t.modifiedTime) <= 5);
-    const hoje      = all.filter(t => daysSince(t.modifiedTime) < 1);
+    const hoje      = all.filter(t => daysSince(t.modifiedTime) <= 3);
 
     setEl('mTotal', all.length);
     setEl('mTotalSub', `${open.length} abertos · ${pending.length} em espera`);
@@ -408,8 +398,8 @@
     setEl('mParadosCritSub', parados5.length>0?'requerem ação urgente':'nenhum crítico', parados5.length>0?'danger':'ok');
     setEl('mParadosWarn', parados3.length, parados3.length>0?'warn':'ok');
     setEl('mParadosWarnSub', parados3.length>0?'monitorar de perto':'nenhum em atenção', parados3.length>0?'warn':'ok');
-    setEl('mHoje', hoje.length, hoje.length>0?'ok':'warn');
-    setEl('mHojeSub', `${Math.round(hoje.length/all.length*100)}% do total movimentado`);
+    setEl('mHoje', hoje.length, 'ok');
+    setEl('mHojeSub', `${Math.round(hoje.length/all.length*100)}% do total em dia`);
 
     // Alert
     const alertBar = document.getElementById('alertBar');
@@ -449,7 +439,6 @@
         </div>`;
       }).join('');
     };
-    renderHealthList('hOkList',   okTickets,   'var(--green)',  false);
     renderHealthList('hWarnList', warnTickets, 'var(--orange)', true);
     renderHealthList('hCritList', critTickets, 'var(--red)',    true);
 

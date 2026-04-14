@@ -75,23 +75,25 @@ export default async function handler(req, res) {
 
   try {
     if (path === 'dashboard') {
-      // Busca sessões ativas do SAC
-      const data = await neppoPost('/chatapi/1.0/api/user-session', {
-        conditions: [],
-        sort: false,
-        page: 0,
-        size: 500
-      }, token);
+      // Busca todas as sessões ativas do SAC paginando
+      const SAC_CONDITIONS = [
+        { key: 'status', value: 'CLOSED', operator: 'NEQ', logic: 'AND' },
+        { key: 'groupConf.operation.operationName', value: 'Sac', operator: 'EQ', logic: 'AND' }
+      ];
 
-      const all = data.results || [];
-
-      // Filtra sessões SAC: groupConf.name contém SAC ou groupList contém SAC
-      const sac = all.filter(s => {
-        const gName = (s.groupConf?.name || '').toUpperCase();
-        const gList = (s.groupList || '').toUpperCase();
-        const opName = (s.groupConf?.operation?.operationName || '').toUpperCase();
-        return gName.includes('SAC') || gList.includes('SAC') || opName === 'SAC';
-      });
+      let sac = [];
+      let page = 0;
+      while (true) {
+        const data = await neppoPost('/chatapi/1.0/api/user-session', {
+          conditions: SAC_CONDITIONS,
+          sort: false, page, size: 100
+        }, token);
+        const batch = data.results || [];
+        sac = sac.concat(batch);
+        if (batch.length < 100) break;
+        page++;
+        if (page > 20) break; // segurança
+      }
 
       // Status dos agentes únicos
       const agentMap = {};

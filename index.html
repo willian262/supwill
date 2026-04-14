@@ -389,11 +389,21 @@
     el.textContent = val;
     if (cls !== undefined) el.className = (el.className||'').replace(/\b(ok|warn|danger)\b/g,'').trim() + (cls ? ' '+cls : '');
   }
-  async function zoho(path, params={}) {
+  async function zoho(path, params={}, retries=3) {
     const qs = new URLSearchParams({path,...params}).toString();
-    const r = await fetch(`/api/zoho?${qs}`);
-    if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error||`HTTP ${r.status}`); }
-    return r.json();
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      const r = await fetch(`/api/zoho?${qs}`);
+      if (r.ok) return r.json();
+      const e = await r.json().catch(()=>({}));
+      const isTokenError = (e.detail||'').includes('too many') || (e.detail||'').includes('Access Denied');
+      if (isTokenError && attempt < retries) {
+        // Espera 10s antes de tentar novamente
+        document.getElementById('lastUpdate').textContent = `Aguardando Zoho... (tentativa ${attempt}/${retries})`;
+        await new Promise(res => setTimeout(res, 10000));
+        continue;
+      }
+      throw new Error(e.error || `HTTP ${r.status}`);
+    }
   }
 
   function daysSince(dateStr) {

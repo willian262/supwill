@@ -85,8 +85,10 @@ export default async function handler(req, res) {
 
       const all = data.results || [];
 
-      // Filtra apenas sessões da operação SAC
-      const sac = all.filter(s => s.operationName === 'Sac');
+      // Filtra pela operação SAC via groupConf
+      const sac = all.filter(s => 
+        s.groupConf?.operation?.operationName === 'Sac'
+      );
 
       // Status dos agentes únicos
       const agentMap = {};
@@ -139,10 +141,9 @@ export default async function handler(req, res) {
         id: s.id,
         status: s.status,
         agentName: s.agent?.displayName,
-        agentProfile: s.agent?.profile?.name,
-        groupConf: s.groupConf,
-        groupList: s.groupList,
-        properties: s.properties
+        groupName: s.groupConf?.name,
+        operationName: s.groupConf?.operation?.operationName,
+        groupList: s.groupList
       }));
       return res.status(200).json({ total: data.size, preview });
     }

@@ -409,10 +409,8 @@
       document.getElementById('liveBadge').classList.add('show');
       show('viewDash');
 
-      // Classificações desabilitadas temporariamente para evitar bloqueio de token
-      // loadClassifications(all).catch(()=>{});
-      document.getElementById('classTotal').textContent = 'desabilitado';
-      document.getElementById('classRows').innerHTML = '<tr><td colspan="6" class="no-data">Classificações temporariamente desabilitadas</td></tr>';
+      // Classificações em background — lento e seguro (5 por vez, pausa de 2s)
+      loadClassifications(all).catch(()=>{});
 
     } catch(err) {
       document.getElementById('errorMsg').textContent = `Erro: ${err.message}`;
@@ -572,12 +570,15 @@
     }).join('')||'<div class="no-data">Nenhum agente ativo</div>';
   }
 
-  // ── Classificações em background ──
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  // ── Classificações em background — rate limiting seguro ──
   async function loadClassifications(tickets) {
     document.getElementById('classRows').innerHTML =
-      '<tr><td colspan="6" class="no-data" style="color:var(--muted)">Carregando classificações...</td></tr>';
+      '<tr><td colspan="6" class="no-data" style="color:var(--muted)">Carregando classificações (0/' + tickets.length + ')...</td></tr>';
 
-    const BATCH = 20;
+    const BATCH = 5;   // 5 por vez
+    const PAUSE = 2000; // 2s de pausa entre lotes
     const classMap = {};
     let fetched = 0;
 
@@ -593,6 +594,10 @@
         const key = cat+'|||'+sub;
         classMap[key] = (classMap[key]||0)+1;
       });
+      // Atualiza progresso
+      document.getElementById('classTotal').textContent = `carregando... ${fetched}/${tickets.length}`;
+      // Pausa entre lotes para não sobrecarregar
+      if (i + BATCH < tickets.length) await sleep(PAUSE);
     }
 
     const entries = Object.entries(classMap)

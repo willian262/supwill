@@ -76,7 +76,7 @@ export default async function handler(req, res) {
         froms.push(from + i * LIMIT);
       }
       const results = await Promise.all(
-        froms.map(f => zohoRequest('tickets', { from: f, limit: LIMIT }, accessToken))
+        froms.map(f => zohoRequest('tickets', { from: f, limit: LIMIT, include: 'cf' }, accessToken))
       );
       let gotAny = false;
       for (const r of results) {

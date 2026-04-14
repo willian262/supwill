@@ -386,26 +386,7 @@
     </div>
   </div>
 
-  <!-- TOP 5 CLASSIFICAÇÃO -->
-  <div class="card">
-    <div class="card-head">
-      <span class="card-title">Top 5 — Classificação / Subclassificação</span>
-      <span class="card-badge" id="classTotal">carregando...</span>
-    </div>
-    <div style="overflow-x:auto">
-      <table class="class-table">
-        <thead><tr>
-          <th>#</th>
-          <th>Classificação</th>
-          <th>Subclassificação</th>
-          <th style="text-align:right">Tickets</th>
-          <th>Distribuição</th>
-          <th style="text-align:right">%</th>
-        </tr></thead>
-        <tbody id="classRows"></tbody>
-      </table>
-    </div>
-  </div>
+
 
 </div>
 
@@ -491,8 +472,7 @@
       document.getElementById('liveBadge').classList.add('show');
       show('viewDash');
 
-      // Classificações em background — lento e seguro (5 por vez, pausa de 2s)
-      loadClassifications(all).catch(()=>{});
+
       // Gráfico de fluxo em background
       loadFluxo(all, agentNames, agentPhotos).catch(()=>{});
 
@@ -775,8 +755,9 @@
       saldoEl.style.color = saldoTotal >= 0 ? 'var(--green)' : 'var(--red)';
 
       // ── Pódio do dia ──
-      const todayStr2 = new Date().toISOString().slice(0,10);
-      const fechadosHoje = closed.filter(t => (t.modifiedTime||'').slice(0,10) === todayStr2);
+      // Usa últimas 24h para cobrir fuso horário BR (UTC-3)
+      const ontem = Date.now() - 24 * 3600000;
+      const fechadosHoje = closed.filter(t => t.modifiedTime && new Date(t.modifiedTime).getTime() >= ontem);
       const podiumMap = {};
       fechadosHoje.forEach(t => {
         if (!t.assigneeId) return;

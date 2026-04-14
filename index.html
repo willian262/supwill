@@ -473,8 +473,8 @@
       show('viewDash');
 
 
-      // Gráfico de fluxo em background
-      loadFluxo(all, agentNames, agentPhotos).catch(()=>{});
+      // Gráfico e pódio em background (com delay para não sobrecarregar token)
+      setTimeout(() => loadFluxo(all, agentNames, agentPhotos).catch(()=>{}), 5000);
 
     } catch(err) {
       document.getElementById('errorMsg').textContent = `Erro: ${err.message}`;

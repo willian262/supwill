@@ -446,34 +446,61 @@
         <span class="card-badge" id="neppoBadge">—</span>
       </div>
     </div>
-    <div style="padding:16px 18px">
+    <div style="padding:16px 18px;display:flex;flex-direction:column;gap:16px">
 
-      <!-- KPIs Neppo -->
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px">
-        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px 14px;text-align:center">
+      <!-- KPIs Neppo — linha 1 -->
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:10px">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--yellow);border-radius:7px;padding:12px 14px;text-align:center">
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Total Ativo</div>
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--yellow)" id="nTotal">—</div>
         </div>
-        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px 14px;text-align:center">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--cyan);border-radius:7px;padding:12px 14px;text-align:center">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Abertas Hoje</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--cyan)" id="nAbertasHoje">—</div>
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--orange);border-radius:7px;padding:12px 14px;text-align:center">
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Aguardando</div>
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--orange)" id="nWaiting">—</div>
         </div>
-        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px 14px;text-align:center">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--green);border-radius:7px;padding:12px 14px;text-align:center">
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Online</div>
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--green)" id="nOnline">—</div>
         </div>
-        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px 14px;text-align:center">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--orange);border-radius:7px;padding:12px 14px;text-align:center">
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Em Pausa</div>
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--orange)" id="nPaused">—</div>
         </div>
-        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px 14px;text-align:center">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--purple);border-radius:7px;padding:12px 14px;text-align:center">
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Bot IA</div>
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--purple)" id="nBot">—</div>
         </div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--red);border-radius:7px;padding:12px 14px;text-align:center">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">TME Médio</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--red);line-height:1.2" id="nTme">—</div>
+        </div>
       </div>
 
-      <!-- Agentes Neppo -->
-      <div id="neppoAgents" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px"></div>
+      <!-- Linha 2: Agentes + Fila por grupo -->
+      <div style="display:grid;grid-template-columns:1fr 260px;gap:14px">
+
+        <!-- Agentes -->
+        <div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--yellow);margin-bottom:10px">Volume por Agente</div>
+          <div id="neppoAgents" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px"></div>
+        </div>
+
+        <!-- Fila por grupo -->
+        <div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--yellow);margin-bottom:10px">Fila por Grupo</div>
+          <div id="neppoGroupQueue" style="display:flex;flex-direction:column;gap:6px"></div>
+        </div>
+      </div>
+
+      <!-- Linha 3: Clientes aguardando há mais tempo -->
+      <div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--yellow);margin-bottom:10px">⏳ Clientes Aguardando Há Mais Tempo</div>
+        <div id="neppoWaiting" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
 
     </div>
   </div>
@@ -1012,28 +1039,20 @@
       const humans  = agents.filter(a => a.name !== 'Bot SAC');
 
       // KPIs
-      document.getElementById('nTotal').textContent   = data.totalConversations || 0;
-      document.getElementById('nWaiting').textContent = data.waiting || 0;
-      document.getElementById('nOnline').textContent  = data.online || 0;
-      document.getElementById('nPaused').textContent  = data.paused || 0;
-      document.getElementById('nBot').textContent     = botSac ? botSac.conversations : 0;
-      document.getElementById('neppoBadge').textContent = `${data.totalConversations} conversas`;
+      document.getElementById('nTotal').textContent       = data.totalConversations || 0;
+      document.getElementById('nAbertasHoje').textContent = data.abertasHoje || 0;
+      document.getElementById('nWaiting').textContent     = data.waiting || 0;
+      document.getElementById('nOnline').textContent      = data.online  || 0;
+      document.getElementById('nPaused').textContent      = data.paused  || 0;
+      document.getElementById('nBot').textContent         = botSac ? botSac.conversations : 0;
+      document.getElementById('nTme').textContent         = data.avgTme || 'N/A';
+      document.getElementById('neppoBadge').textContent   = `${data.totalConversations} conversas`;
 
       document.getElementById('neppoUpdate').textContent =
         'atualizado ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
 
-      // Status colors
-      const statusColor = s => {
-        if (s === 'ONLINE') return 'var(--green)';
-        if (s === 'OFFLINE') return 'var(--red)';
-        return 'var(--orange)'; // FIRST_PAUSE etc
-      };
-      const statusLabel = s => {
-        if (s === 'ONLINE') return 'Online';
-        if (s === 'OFFLINE') return 'Offline';
-        if (s === 'FIRST_PAUSE') return 'Em pausa';
-        return s || 'Desconhecido';
-      };
+      const statusColor = s => s==='ONLINE'?'var(--green)':s==='OFFLINE'?'var(--red)':'var(--orange)';
+      const statusLabel = s => s==='ONLINE'?'Online':s==='OFFLINE'?'Offline':s==='FIRST_PAUSE'?'Em pausa':(s||'?');
 
       // Cards de agentes
       document.getElementById('neppoAgents').innerHTML = humans.map(a => `
@@ -1047,6 +1066,29 @@
             </div>
           </div>
         </div>`).join('');
+
+      // Fila por grupo
+      document.getElementById('neppoGroupQueue').innerHTML = (data.groupQueue||[]).map(g => `
+        <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--orange);border-radius:6px;padding:8px 12px">
+          <span style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px">${g.group}</span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--orange);margin-left:8px">${g.count}</span>
+        </div>`).join('') || '<div style="font-size:11px;color:var(--subtle)">Nenhuma fila</div>';
+
+      // Clientes aguardando há mais tempo
+      const waitColor = w => {
+        if (!w) return 'var(--muted)';
+        if (w.includes('h')) return 'var(--red)';
+        const mins = parseInt(w);
+        return mins > 30 ? 'var(--orange)' : 'var(--muted)';
+      };
+      document.getElementById('neppoWaiting').innerHTML = (data.longestWaiting||[]).map((w,i) => `
+        <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-left:3px solid ${waitColor(w.waitTime)};border-radius:6px;padding:8px 12px;gap:10px">
+          <div style="min-width:0">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px">${w.name}</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px">${w.group}${w.agent?' · '+w.agent.split(' ')[0]:''}</div>
+          </div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:${waitColor(w.waitTime)};white-space:nowrap">${w.waitTime}</div>
+        </div>`).join('') || '<div style="font-size:11px;color:var(--subtle)">Nenhum aguardando</div>';
 
     } catch(e) {
       document.getElementById('neppoUpdate').textContent = 'erro ao carregar';

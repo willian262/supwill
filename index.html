@@ -300,7 +300,7 @@
 
     <!-- Status da operação -->
     <div class="card">
-      <div class="card-head"><span class="card-title">Distribuição por Status</span></div>
+      <div class="card-head"><span class="card-title">Top 8 — Distribuição por Status</span></div>
       <div class="status-list" id="statusList"></div>
     </div>
 
@@ -550,7 +550,7 @@
     // ── Status distribution ──
     const sCnt = {};
     all.forEach(t => { sCnt[t.status]=(sCnt[t.status]||0)+1; });
-    const top = Object.entries(sCnt).sort((a,b)=>b[1]-a[1]);
+    const top = Object.entries(sCnt).sort((a,b)=>b[1]-a[1]).slice(0,8);
     const maxS = Math.max(...top.map(s=>s[1]),1);
     document.getElementById('statusList').innerHTML = top.map(([n,c],i) => `
       <div class="status-row">

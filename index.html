@@ -195,6 +195,7 @@
       display:grid;
       grid-template-columns:1fr 300px;
       gap:14px;
+      align-items:start;
     }
     .col-left  { display:flex; flex-direction:column; gap:14px; }
     .col-right { display:flex; flex-direction:column; gap:14px; }
@@ -424,75 +425,68 @@
   </div>
 
   <!-- MAIN -->
-  <div class="main-grid">
-    <div class="col-left">
+  <!-- LINHA 1: Tipos + Status Customizados + Agentes -->
+  <div style="display:grid;grid-template-columns:260px 240px 1fr;gap:14px">
 
-      <!-- TIPOS + AGENTES -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-
-        <div class="card">
-          <div class="card-head">
-            <span class="card-title">Tipos de Status</span>
-          </div>
-          <div class="type-grid" id="typeGrid"></div>
-          <div style="padding:0 16px 14px">
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Distribuição</div>
-            <div id="statusDist"></div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-head">
-            <span class="card-title">Por Agente</span>
-            <div class="legend">
-              <div class="leg"><div class="leg-dot" style="background:var(--yellow)"></div>Ab.</div>
-              <div class="leg"><div class="leg-dot" style="background:var(--orange)"></div>Esp.</div>
-              <div class="leg"><div class="leg-dot" style="background:var(--red)"></div>Esc.</div>
-            </div>
-          </div>
-          <div class="agent-list" id="agentRows"></div>
-        </div>
+    <!-- Tipos de Status -->
+    <div class="card">
+      <div class="card-head"><span class="card-title">Tipos de Status</span></div>
+      <div class="type-grid" id="typeGrid"></div>
+      <div style="padding:0 16px 14px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Distribuição</div>
+        <div id="statusDist"></div>
       </div>
-
-      <!-- CLASSIFICAÇÃO -->
-      <div class="card">
-        <div class="card-head">
-          <span class="card-title">Top 5 — Classificação / Subclassificação</span>
-          <span class="card-badge" id="classTotal">0 com classe</span>
-        </div>
-        <div style="overflow-x:auto">
-          <table class="crit-table">
-            <thead><tr>
-              <th>#</th><th>Classificação</th><th>Subclassificação</th><th style="text-align:right">Tickets</th><th style="text-align:right">%</th>
-            </tr></thead>
-            <tbody id="classRows"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- CRÍTICOS -->
-      <div class="card">
-        <div class="card-head">
-          <span class="card-title">Tickets Críticos — SLA em Risco ou Rompido</span>
-          <span class="card-badge" id="critCount">0</span>
-        </div>
-        <div style="overflow-x:auto">
-          <table class="crit-table">
-            <thead><tr>
-              <th>Ticket</th><th>Assunto</th><th>Agente</th><th>Status</th><th>SLA</th>
-            </tr></thead>
-            <tbody id="critRows"></tbody>
-          </table>
-        </div>
-      </div>
-
     </div>
 
-    <div class="col-right">
-      <div class="card">
-        <div class="card-head"><span class="card-title">Status Customizados</span></div>
-        <div class="status-list" id="statusList"></div>
+    <!-- Status Customizados -->
+    <div class="card">
+      <div class="card-head"><span class="card-title">Status Customizados</span></div>
+      <div class="status-list" id="statusList"></div>
+    </div>
+
+    <!-- Por Agente -->
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Volume por Agente</span>
+        <div class="legend">
+          <div class="leg"><div class="leg-dot" style="background:var(--yellow)"></div>Ab.</div>
+          <div class="leg"><div class="leg-dot" style="background:var(--orange)"></div>Esp.</div>
+          <div class="leg"><div class="leg-dot" style="background:var(--red)"></div>Esc.</div>
+        </div>
       </div>
+      <div class="agent-list" id="agentRows"></div>
+    </div>
+  </div>
+
+  <!-- LINHA 2: Top 5 Classificação -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Top 5 — Classificação / Subclassificação</span>
+      <span class="card-badge" id="classTotal">0 com classe</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="crit-table">
+        <thead><tr>
+          <th>#</th><th>Classificação</th><th>Subclassificação</th><th style="text-align:right">Tickets</th><th style="text-align:right">%</th>
+        </tr></thead>
+        <tbody id="classRows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- LINHA 3: Tickets Críticos -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Tickets Críticos — SLA em Risco ou Rompido</span>
+      <span class="card-badge" id="critCount">0</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="crit-table">
+        <thead><tr>
+          <th>Ticket</th><th>Assunto</th><th>Agente</th><th>Status</th><th>SLA</th>
+        </tr></thead>
+        <tbody id="critRows"></tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -712,8 +706,8 @@
     document.getElementById('classRows').innerHTML = '<tr><td colspan="5" class="no-data" style="color:var(--muted)">Carregando classificações...</td></tr>';
     
     // Pega os IDs dos tickets ativos (máx 100 para não sobrecarregar)
-    const sample = tickets.slice(0, 100);
-    const BATCH = 10;
+    const sample = tickets; // todos os tickets ativos
+    const BATCH = 20;
     const details = [];
     
     for (let i = 0; i < sample.length; i += BATCH) {

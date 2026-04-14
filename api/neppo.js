@@ -137,13 +137,12 @@ export default async function handler(req, res) {
       }, token);
       const preview = (data.results || []).map(s => ({
         id: s.id,
-        operationName: s.operationName,
-        groupName: s.groupName,
         status: s.status,
-        channel: s.channel,
-        agentProfile: s.agent?.profile?.name,
         agentName: s.agent?.displayName,
-        allKeys: Object.keys(s)
+        agentProfile: s.agent?.profile?.name,
+        groupConf: s.groupConf,
+        groupList: s.groupList,
+        properties: s.properties
       }));
       return res.status(200).json({ total: data.size, preview });
     }

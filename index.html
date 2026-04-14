@@ -303,7 +303,7 @@
   <!-- PÓDIO DO DIA -->
   <div class="card">
     <div class="card-head">
-      <span class="card-title">🏆 Pódio do Dia — Tickets Fechados Hoje</span>
+      <span class="card-title">🏆 Pódio do Dia — Responsáveis por Tickets Fechados Hoje</span>
       <span class="card-badge" id="podiumDate">hoje</span>
     </div>
     <div id="podiumContent" style="padding:20px 18px">
@@ -755,12 +755,13 @@
       saldoEl.style.color = saldoTotal >= 0 ? 'var(--green)' : 'var(--red)';
 
       // ── Pódio do dia ──
-      // Dia atual no horário de Brasília (UTC-3)
+      // Usa closedTime no horário de Brasília (UTC-3)
       const agora = new Date();
       const hojeBar = new Date(agora.getTime() - 3 * 3600000).toISOString().slice(0,10);
       const fechadosHoje = closed.filter(t => {
-        if (!t.modifiedTime) return false;
-        const dBR = new Date(new Date(t.modifiedTime).getTime() - 3 * 3600000).toISOString().slice(0,10);
+        const ref = t.closedTime || t.modifiedTime;
+        if (!ref) return false;
+        const dBR = new Date(new Date(ref).getTime() - 3 * 3600000).toISOString().slice(0,10);
         return dBR === hojeBar;
       });
       const podiumMap = {};

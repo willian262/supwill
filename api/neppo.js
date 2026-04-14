@@ -96,9 +96,14 @@ export default async function handler(req, res) {
       }
 
       // Status dos agentes únicos — ignora bots e sessões sem agente humano
-      // Remove apenas automações internas — mantém Bot SAC pois é fila de IA legítima
-      const BOT_KEYWORDS = ['pesquisa', '@botserver', 'csat', 'nps', 'inatividade', 'inicial padrão'];
-      const isBot = name => !name || BOT_KEYWORDS.some(k => (name||'').toLowerCase().includes(k));
+      // Remove automações internas — mantém Bot SAC (fila de IA legítima)
+      // e remove "Desconhecido" (sessões sem agente atribuído ainda)
+      const BOT_KEYWORDS = ['pesquisa', '@botserver', 'csat', 'nps', 'inatividade', 'inicial'];
+      const isBot = name => {
+        if (!name) return true;
+        const lower = name.toLowerCase();
+        return BOT_KEYWORDS.some(k => lower.includes(k));
+      };
 
       const agentMap = {};
       sac.forEach(s => {

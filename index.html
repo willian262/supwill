@@ -340,10 +340,9 @@
     show('viewLoading');
     document.getElementById('btnRefresh').classList.add('spinning');
     try {
-      const [allData, agentsData] = await Promise.all([
-        zoho('tickets', {}),
-        zoho('agents', { limit: 100 })
-      ]);
+      // Sequencial para não sobrecarregar o endpoint de token da Zoho
+      const allData    = await zoho('tickets', {});
+      const agentsData = await zoho('agents', { limit: 100 });
 
       const all = allData.data || [];
 

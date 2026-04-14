@@ -183,6 +183,31 @@
     .podium-base.p2 { background:rgba(148,163,184,0.06); border:1px solid rgba(148,163,184,0.15); }
     .podium-base.p3 { background:rgba(240,122,48,0.06); border:1px solid rgba(240,122,48,0.15); }
 
+    /* ── ABAS ── */
+    .tabs-bar {
+      display:flex; align-items:center; gap:2px;
+      padding:0 24px;
+      background:#0d0d0d;
+      border-bottom:1px solid var(--border);
+    }
+    .tab-btn {
+      display:flex; align-items:center; gap:7px;
+      padding:12px 20px;
+      font-family:'Barlow Condensed',sans-serif;
+      font-size:11px; font-weight:700;
+      letter-spacing:2px; text-transform:uppercase;
+      color:var(--muted); cursor:pointer;
+      border:none; background:none;
+      border-bottom:2px solid transparent;
+      margin-bottom:-1px;
+      transition:color .2s, border-color .2s;
+    }
+    .tab-btn:hover { color:var(--text); }
+    .tab-btn.active { color:var(--yellow); border-bottom-color:var(--yellow); }
+    .tab-btn .tab-dot { width:6px; height:6px; border-radius:50%; background:currentColor; }
+    .tab-panel { display:none; }
+    .tab-panel.active { display:block; }
+
     /* scrollbar */
     ::-webkit-scrollbar { width:4px; height:4px; }
     ::-webkit-scrollbar-track { background:transparent; }
@@ -219,6 +244,16 @@
   <span id="alertMsg"></span>
 </div>
 
+<!-- ABAS -->
+<div class="tabs-bar" id="tabsBar" style="display:none">
+  <button class="tab-btn active" onclick="switchTab('zoho')" id="tabZoho">
+    <div class="tab-dot"></div>Zoho Desk
+  </button>
+  <button class="tab-btn" onclick="switchTab('neppo')" id="tabNeppo">
+    <div class="tab-dot"></div>WhatsApp
+  </button>
+</div>
+
 <!-- LOADING -->
 <div class="loading-screen" id="viewLoading">
   <div class="loader-ring"></div>
@@ -233,7 +268,7 @@
 </div>
 
 <!-- DASHBOARD -->
-<div class="dash" id="viewDash">
+<div class="tab-panel active" id="tabPanelZoho"><div class="dash" id="viewDash">
 
   <!-- KPIs -->
   <div class="kpi-strip">
@@ -258,6 +293,9 @@
       <div class="kpi-sub" id="mHojeSub"></div>
     </div>
   </div>
+
+
+
 
   <!-- GRÁFICO 30 DIAS -->
   <div class="card">
@@ -389,7 +427,97 @@
     </div>
   </div>
 
-</div>
+  </div>
+
+
+</div></div><!-- fim tab Zoho -->
+
+  <!-- ABA WHATSAPP -->
+  <div class="tab-panel" id="tabPanelNeppo">
+  <div class="dash">
+  <!-- NEPPO WHATSAPP -->
+  <div class="card" id="neppoCard">
+    <div class="card-head">
+      <span class="card-title">💬 WhatsApp SAC — Conversas Ativas</span>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:10px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase" id="neppoUpdate">carregando...</span>
+        <span class="card-badge" id="neppoBadge">—</span>
+      </div>
+    </div>
+    <div style="padding:16px 18px">
+
+      <!-- KPIs Neppo -->
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px 14px;text-align:center">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Total Ativo</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--yellow)" id="nTotal">—</div>
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px 14px;text-align:center">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Aguardando</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--orange)" id="nWaiting">—</div>
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px 14px;text-align:center">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Online</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--green)" id="nOnline">—</div>
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px 14px;text-align:center">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Em Pausa</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--orange)" id="nPaused">—</div>
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px 14px;text-align:center">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Bot IA</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--purple)" id="nBot">—</div>
+        </div>
+      </div>
+
+      <!-- Agentes Neppo -->
+      <div id="neppoAgents" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px"></div>
+
+    </div>
+  </div>
+
+  <!-- NEPPO WHATSAPP -->
+  <div class="card" id="neppoCard">
+    <div class="card-head">
+      <span class="card-title">💬 WhatsApp SAC — Conversas Ativas</span>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:10px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase" id="neppoUpdate">carregando...</span>
+        <span class="card-badge" id="neppoBadge">—</span>
+      </div>
+    </div>
+    <div style="padding:16px 18px">
+
+      <!-- KPIs Neppo -->
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px 14px;text-align:center">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Total Ativo</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--yellow)" id="nTotal">—</div>
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px 14px;text-align:center">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Aguardando</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--orange)" id="nWaiting">—</div>
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px 14px;text-align:center">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Online</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--green)" id="nOnline">—</div>
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px 14px;text-align:center">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Em Pausa</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--orange)" id="nPaused">—</div>
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px 14px;text-align:center">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Bot IA</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--purple)" id="nBot">—</div>
+        </div>
+      </div>
+
+      <!-- Agentes Neppo -->
+      <div id="neppoAgents" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px"></div>
+
+    </div>
+  </div>
+
+  </div></div><!-- fim tab Neppo -->
 
 <script>
   // ── Logo embutido (base64 carregado inline) ──
@@ -440,7 +568,15 @@
   }
 
   async function loadData() {
-    show('viewLoading');
+    function switchTab(tab) {
+    document.getElementById('tabPanelZoho').classList.toggle('active', tab === 'zoho');
+    document.getElementById('tabPanelNeppo').classList.toggle('active', tab === 'neppo');
+    document.getElementById('tabZoho').classList.toggle('active', tab === 'zoho');
+    document.getElementById('tabNeppo').classList.toggle('active', tab === 'neppo');
+    if (tab === 'neppo') loadNeppo();
+  }
+
+  show('viewLoading');
     document.getElementById('btnRefresh').classList.add('spinning');
     try {
       // Sequencial para não sobrecarregar o endpoint de token da Zoho
@@ -471,6 +607,7 @@
       document.getElementById('lastUpdate').textContent =
         'ATUALIZADO ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
       document.getElementById('liveBadge').classList.add('show');
+      document.getElementById('tabsBar').style.display = 'flex';
       show('viewDash');
 
 
@@ -903,9 +1040,65 @@
     }
   }
 
+  // ── Neppo WhatsApp ──
+  async function loadNeppo() {
+    try {
+      const data = await fetch('/api/neppo?path=dashboard').then(r=>r.json());
+
+      const agents = data.agents || [];
+      const botSac  = agents.find(a => a.name === 'Bot SAC');
+      const humans  = agents.filter(a => a.name !== 'Bot SAC');
+
+      // KPIs
+      document.getElementById('nTotal').textContent   = data.totalConversations || 0;
+      document.getElementById('nWaiting').textContent = data.waiting || 0;
+      document.getElementById('nOnline').textContent  = data.online || 0;
+      document.getElementById('nPaused').textContent  = data.paused || 0;
+      document.getElementById('nBot').textContent     = botSac ? botSac.conversations : 0;
+      document.getElementById('neppoBadge').textContent = `${data.totalConversations} conversas`;
+
+      document.getElementById('neppoUpdate').textContent =
+        'atualizado ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+
+      // Status colors
+      const statusColor = s => {
+        if (s === 'ONLINE') return 'var(--green)';
+        if (s === 'OFFLINE') return 'var(--red)';
+        return 'var(--orange)'; // FIRST_PAUSE etc
+      };
+      const statusLabel = s => {
+        if (s === 'ONLINE') return 'Online';
+        if (s === 'OFFLINE') return 'Offline';
+        if (s === 'FIRST_PAUSE') return 'Em pausa';
+        return s || 'Desconhecido';
+      };
+
+      // Cards de agentes
+      document.getElementById('neppoAgents').innerHTML = humans.map(a => `
+        <div style="background:var(--surface2);border:1px solid var(--border);border-left:3px solid ${statusColor(a.status)};border-radius:7px;padding:10px 12px">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">${a.name.split(' ')[0]}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:10px;color:${statusColor(a.status)};font-weight:600;text-transform:uppercase;letter-spacing:1px">${statusLabel(a.status)}</span>
+            <div style="text-align:right">
+              <span style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--yellow)">${a.conversations}</span>
+              ${a.waiting > 0 ? `<span style="font-size:10px;color:var(--orange);margin-left:4px">⏳${a.waiting}</span>` : ''}
+            </div>
+          </div>
+        </div>`).join('');
+
+    } catch(e) {
+      document.getElementById('neppoUpdate').textContent = 'erro ao carregar';
+    }
+  }
+
   show('viewLoading');
   loadData();
-  setInterval(loadData, 300000); // 5 minutos
+  setInterval(loadData, 300000);
+  // Neppo carrega separado com delay para não sobrecarregar
+  setTimeout(() => {
+    loadNeppo();
+    setInterval(loadNeppo, 120000); // atualiza a cada 2 minutos
+  }, 3000); // 5 minutos
 </script>
 </body>
 </html>

@@ -321,14 +321,17 @@
   <div class="card">
     <div class="card-head">
       <span class="card-title">Fluxo Diário — Últimos 30 Dias</span>
-      <div style="display:flex;align-items:center;gap:16px">
+      <div style="display:flex;align-items:center;gap:20px">
         <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
           <div style="width:10px;height:10px;border-radius:2px;background:var(--yellow)"></div>Abertos
         </div>
         <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
           <div style="width:10px;height:10px;border-radius:2px;background:var(--green)"></div>Fechados
         </div>
-        <span class="card-badge" id="fluxoBadge">carregando...</span>
+        <div style="display:flex;flex-direction:column;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 14px;min-width:90px">
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Saldo 30d</span>
+          <span id="fluxoBadge" style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;line-height:1.1">—</span>
+        </div>
       </div>
     </div>
     <div style="padding:16px 18px">
@@ -693,10 +696,9 @@
       const fData    = days.map(d => fechados[d]);
       const saldoTotal = fData.reduce((s,v)=>s+v,0) - aData.reduce((s,v)=>s+v,0);
 
-      document.getElementById('fluxoBadge').textContent =
-        saldoTotal >= 0 ? `+${saldoTotal} fechados no período` : `${saldoTotal} saldo no período`;
-      document.getElementById('fluxoBadge').className =
-        'card-badge ' + (saldoTotal >= 0 ? 'ok' : 'danger');
+      const saldoEl = document.getElementById('fluxoBadge');
+      saldoEl.textContent = saldoTotal >= 0 ? `+${saldoTotal}` : `${saldoTotal}`;
+      saldoEl.style.color = saldoTotal >= 0 ? 'var(--green)' : 'var(--red)';
 
       // Destroi chart anterior se existir
       if (window._fluxoChart) window._fluxoChart.destroy();

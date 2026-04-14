@@ -270,6 +270,9 @@
         <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
           <div style="width:10px;height:10px;border-radius:2px;background:var(--green)"></div>Fechados
         </div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
+          <div style="width:10px;height:10px;border-radius:2px;background:var(--red)"></div>Reabertos
+        </div>
         <div style="display:flex;flex-direction:column;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 14px;min-width:90px">
           <span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Saldo 30d</span>
           <span id="fluxoBadge" style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;line-height:1.1">—</span>
@@ -748,9 +751,20 @@
         if (fechados[dBR] !== undefined) fechados[dBR]++;
       });
 
+      // Conta reabertos: tickets ativos que tinham closedTime (foram fechados e reabriram)
+      const reabertos = {};
+      days.forEach(d => { reabertos[d] = 0; });
+      allActive.forEach(t => {
+        if (!t.closedTime) return;
+        // Usa closedTime como referência de quando foi fechado (e depois reaberto)
+        const dBR = toBR(t.closedTime);
+        if (dBR && reabertos[dBR] !== undefined) reabertos[dBR]++;
+      });
+
       const labels   = days.map(d => { const dt=new Date(d+'T12:00:00'); return dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}); });
       const aData    = days.map(d => abertos[d]);
       const fData    = days.map(d => fechados[d]);
+      const rData    = days.map(d => reabertos[d]);
       const saldoTotal = fData.reduce((s,v)=>s+v,0) - aData.reduce((s,v)=>s+v,0);
 
       const saldoEl = document.getElementById('fluxoBadge');
@@ -848,6 +862,14 @@
               borderColor: '#5ec987',
               borderWidth: 1,
               borderRadius: 3,
+            },
+            {
+              label: 'Reabertos',
+              data: rData,
+              backgroundColor: 'rgba(232,92,74,0.6)',
+              borderColor: '#e85c4a',
+              borderWidth: 1,
+              borderRadius: 3,
             }
           ]
         },
@@ -866,8 +888,11 @@
                 afterBody: (items) => {
                   const a = items.find(i=>i.dataset.label==='Abertos')?.parsed.y||0;
                   const f = items.find(i=>i.dataset.label==='Fechados')?.parsed.y||0;
+                  const r = items.find(i=>i.dataset.label==='Reabertos')?.parsed.y||0;
                   const s = f - a;
-                  return `Saldo: ${s >= 0 ? '+' : ''}${s}`;
+                  const lines = [`Saldo: ${s >= 0 ? '+' : ''}${s}`];
+                  if (r > 0) lines.push(`⚠ ${r} reaberto(s)`);
+                  return lines;
                 }
               }
             }

@@ -270,9 +270,7 @@
         <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
           <div style="width:10px;height:10px;border-radius:2px;background:var(--green)"></div>Fechados
         </div>
-        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
-          <div style="width:10px;height:10px;border-radius:2px;background:var(--red)"></div>Reabertos
-        </div>
+
         <div style="display:flex;flex-direction:column;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 14px;min-width:90px">
           <span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Saldo 30d</span>
           <span id="fluxoBadge" style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;line-height:1.1">—</span>
@@ -863,14 +861,7 @@
               borderWidth: 1,
               borderRadius: 3,
             },
-            {
-              label: 'Reabertos',
-              data: rData,
-              backgroundColor: 'rgba(232,92,74,0.6)',
-              borderColor: '#e85c4a',
-              borderWidth: 1,
-              borderRadius: 3,
-            }
+
           ]
         },
         options: {
@@ -888,11 +879,8 @@
                 afterBody: (items) => {
                   const a = items.find(i=>i.dataset.label==='Abertos')?.parsed.y||0;
                   const f = items.find(i=>i.dataset.label==='Fechados')?.parsed.y||0;
-                  const r = items.find(i=>i.dataset.label==='Reabertos')?.parsed.y||0;
                   const s = f - a;
-                  const lines = [`Saldo: ${s >= 0 ? '+' : ''}${s}`];
-                  if (r > 0) lines.push(`⚠ ${r} reaberto(s)`);
-                  return lines;
+                  return `Saldo: ${s >= 0 ? '+' : ''}${s}`;
                 }
               }
             }

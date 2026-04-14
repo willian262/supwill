@@ -97,19 +97,19 @@ export default async function handler(req, res) {
     }
 
     if (path === 'sessions') {
-      // Sessões ativas
+      // Sessões ativas — filtra por groupName do SAC
       const data = await neppoPost('/chatapi/1.0/api/user-session', {
-        conditions: [ sacFilter ],
+        conditions: [],
         direction: 'DESC', sort: true, sortColumn: 'id',
-        page: 0, size: 500
+        page: 0, size: 10
       }, token);
       return res.status(200).json(data);
     }
 
     if (path === 'agents') {
-      // Agentes da operação SAC
+      // Agentes — sem filtro de operationName (não existe nesse endpoint)
       const data = await neppoPost('/chatapi/1.0/api/agent', {
-        conditions: [ sacFilter ],
+        conditions: [],
         direction: 'ASC', sort: true, sortColumn: 'agentName',
         page: 0, size: 200
       }, token);

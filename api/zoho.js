@@ -53,7 +53,10 @@ export default async function handler(req, res) {
 
   try {
     if (path !== 'tickets') {
-      const data = await zohoRequest(path, { ...params, limit: params.limit || '100' }, accessToken);
+      // Alguns endpoints não aceitam limit (ex: fields)
+      const needsLimit = ['agents','departments','contacts','teams','products'].some(p => path.startsWith(p));
+      const reqParams = needsLimit ? { ...params, limit: params.limit || '100' } : { ...params };
+      const data = await zohoRequest(path, reqParams, accessToken);
       return res.status(200).json(data);
     }
 

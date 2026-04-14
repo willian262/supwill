@@ -52,7 +52,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Endpoints que não são tickets
     if (path !== 'tickets') {
       const data = await zohoRequest(path, { ...params, limit: params.limit || '100' }, accessToken);
       return res.status(200).json(data);
@@ -62,24 +61,35 @@ export default async function handler(req, res) {
     const CLOSED   = ['Fechado', 'Fechado Inatividade'];
     const LIMIT    = 100;
 
-    // Busca página por página até acabar
+    // Busca paralela: 20 páginas simultâneas (2000 tickets por rodada)
+    // Para quando uma rodada inteira retorna vazio
     let allTickets = [];
     let from = 1;
-    while (from <= 5000) {
-      const result = await zohoRequest('tickets', { from, limit: LIMIT }, accessToken);
-      const batch = result.data || [];
-      if (batch.length === 0) break;
-      allTickets = allTickets.concat(batch);
-      if (batch.length < LIMIT) break;
-      from += LIMIT;
+    const MAX = 5000;
+
+    while (from <= MAX) {
+      const froms = [];
+      for (let i = 0; i < 20 && (from + i * LIMIT) <= MAX; i++) {
+        froms.push(from + i * LIMIT);
+      }
+      const results = await Promise.all(
+        froms.map(f => zohoRequest('tickets', { from: f, limit: LIMIT }, accessToken))
+      );
+      let gotAny = false;
+      for (const r of results) {
+        const batch = r.data || [];
+        if (batch.length > 0) gotAny = true;
+        allTickets = allTickets.concat(batch);
+      }
+      if (!gotAny) break;
+      from += froms.length * LIMIT;
     }
 
-    // Filtra: só departamento SAC e status != Fechado
+    // Filtra SAC + ativos
     const filtered = allTickets
       .filter(t => t.departmentId === SAC_DEPT)
       .filter(t => !CLOSED.includes(t.status));
 
-    // Ordena do mais recente para o mais antigo
     filtered.sort((a, b) => new Date(b.createdTime) - new Date(a.createdTime));
 
     return res.status(200).json({ data: filtered, count: filtered.length });

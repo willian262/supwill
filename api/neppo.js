@@ -161,8 +161,16 @@ export default async function handler(req, res) {
         status: s.status,
         agentName: s.agent?.displayName,
         groupName: s.groupConf?.name,
-        operationName: s.groupConf?.operation?.operationName,
-        groupList: s.groupList
+        createdAt: s.createdAt,
+        attendedAt: s.attendedAt,
+        availableAt: s.availableAt,
+        tme: s.tme,
+        tma: s.tma,
+        tmi: s.tmi,
+        tmic: s.tmic,
+        tmia: s.tmia,
+        userDisplayName: s.user?.displayName,
+        userPhone: s.user?.phone
       }));
       return res.status(200).json({ total: data.size, rawSize: data.results?.length, preview, error: data.message });
     }

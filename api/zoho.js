@@ -41,7 +41,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { path, statusType, ...params } = req.query;
+  const { path, ...params } = req.query;
   if (!path) return res.status(400).json({ error: 'path obrigatório' });
 
   let accessToken;
@@ -59,10 +59,10 @@ export default async function handler(req, res) {
     }
 
     const SAC_DEPT = '365059000000006907';
-    const LIMIT = 100;
+    const CLOSED   = ['Fechado', 'Fechado Inatividade'];
+    const LIMIT    = 100;
 
-    // Busca sequencial: página por página até retornar vazio
-    // Máximo 5000 tickets para segurança
+    // Busca página por página até acabar
     let allTickets = [];
     let from = 1;
     while (from <= 5000) {
@@ -70,21 +70,17 @@ export default async function handler(req, res) {
       const batch = result.data || [];
       if (batch.length === 0) break;
       allTickets = allTickets.concat(batch);
-      if (batch.length < LIMIT) break; // última página
+      if (batch.length < LIMIT) break;
       from += LIMIT;
     }
 
+    // Filtra: só departamento SAC e status != Fechado
+    const filtered = allTickets
+      .filter(t => t.departmentId === SAC_DEPT)
+      .filter(t => !CLOSED.includes(t.status));
+
     // Ordena do mais recente para o mais antigo
-    allTickets.sort((a, b) => new Date(b.createdTime) - new Date(a.createdTime));
-
-    // Filtra pelo departamento SAC
-    const sacTickets = allTickets.filter(t => t.departmentId === SAC_DEPT);
-
-    // Filtra por statusType se solicitado
-    let filtered = sacTickets;
-    if (statusType) {
-      filtered = sacTickets.filter(t => t.statusType === statusType);
-    }
+    filtered.sort((a, b) => new Date(b.createdTime) - new Date(a.createdTime));
 
     return res.status(200).json({ data: filtered, count: filtered.length });
 

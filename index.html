@@ -452,15 +452,17 @@
     try {
       const dept = await getDeptId();
 
-      // Uma única chamada busca TODOS os tickets — o backend varre tudo uma vez só
+      // Uma chamada só — backend traz tudo, frontend filtra por status
       const allData = await zoho('tickets', {});
       const allRaw  = allData.data || [];
 
-      const open     = allRaw.filter(t => t.statusType === 'Open');
-      const pending  = allRaw.filter(t => t.statusType === 'On Hold');
-      const resolved = allRaw.filter(t => t.statusType === 'Closed');
-      const escalated = open.filter(t => t.priority === 'Vencido');
-      const allActive = [...open, ...pending];
+      const CLOSED_STATUS = ['Fechado', 'Fechado Inatividade'];
+      const active    = allRaw.filter(t => !CLOSED_STATUS.includes(t.status));
+      const resolved  = allRaw.filter(t =>  CLOSED_STATUS.includes(t.status));
+      const open      = active.filter(t => t.statusType === 'Open');
+      const pending   = active.filter(t => t.statusType === 'On Hold');
+      const escalated = active.filter(t => t.priority === 'Vencido');
+      const allActive = active;
 
       // Busca todos os agentes com paginação
       const agentNames = {};

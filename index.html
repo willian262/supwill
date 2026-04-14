@@ -755,9 +755,14 @@
       saldoEl.style.color = saldoTotal >= 0 ? 'var(--green)' : 'var(--red)';
 
       // ── Pódio do dia ──
-      // Usa últimas 24h para cobrir fuso horário BR (UTC-3)
-      const ontem = Date.now() - 24 * 3600000;
-      const fechadosHoje = closed.filter(t => t.modifiedTime && new Date(t.modifiedTime).getTime() >= ontem);
+      // Dia atual no horário de Brasília (UTC-3)
+      const agora = new Date();
+      const hojeBar = new Date(agora.getTime() - 3 * 3600000).toISOString().slice(0,10);
+      const fechadosHoje = closed.filter(t => {
+        if (!t.modifiedTime) return false;
+        const dBR = new Date(new Date(t.modifiedTime).getTime() - 3 * 3600000).toISOString().slice(0,10);
+        return dBR === hojeBar;
+      });
       const podiumMap = {};
       fechadosHoje.forEach(t => {
         if (!t.assigneeId) return;

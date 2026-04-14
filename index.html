@@ -223,6 +223,47 @@
     </div>
   </div>
 
+  <!-- TIMES -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+
+    <div class="card" style="border-top:2px solid var(--yellow)">
+      <div class="card-head">
+        <span class="card-title">⚙ Team Processos</span>
+        <span class="card-badge" id="tProcBadge">0</span>
+      </div>
+      <div style="padding:14px 16px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:48px;font-weight:800;line-height:1;color:var(--yellow)" id="tProcTotal">—</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Logística · Comercial · Financeiro</div>
+        <div style="display:flex;gap:16px;margin-top:12px" id="tProcStats"></div>
+      </div>
+    </div>
+
+    <div class="card" style="border-top:2px solid var(--cyan)">
+      <div class="card-head">
+        <span class="card-title">🔧 Team Técnico</span>
+        <span class="card-badge" id="tTecBadge">0</span>
+      </div>
+      <div style="padding:14px 16px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:48px;font-weight:800;line-height:1;color:var(--cyan)" id="tTecTotal">—</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Defeito em Produto · Suporte Técnico</div>
+        <div style="display:flex;gap:16px;margin-top:12px" id="tTecStats"></div>
+      </div>
+    </div>
+
+    <div class="card" style="border-top:2px solid var(--purple)">
+      <div class="card-head">
+        <span class="card-title">📢 Ouvidoria</span>
+        <span class="card-badge" id="tOuvBadge">0</span>
+      </div>
+      <div style="padding:14px 16px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:48px;font-weight:800;line-height:1;color:var(--purple)" id="tOuvTotal">—</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Nível 2/3 · Victor Gabriel</div>
+        <div style="display:flex;gap:16px;margin-top:12px" id="tOuvStats"></div>
+      </div>
+    </div>
+
+  </div>
+
   <!-- SAÚDE DA OPERAÇÃO -->
   <div class="card">
     <div class="card-head">
@@ -368,8 +409,10 @@
       document.getElementById('liveBadge').classList.add('show');
       show('viewDash');
 
-      // Classificações em background
-      loadClassifications(all).catch(()=>{});
+      // Classificações desabilitadas temporariamente para evitar bloqueio de token
+      // loadClassifications(all).catch(()=>{});
+      document.getElementById('classTotal').textContent = 'desabilitado';
+      document.getElementById('classRows').innerHTML = '<tr><td colspan="6" class="no-data">Classificações temporariamente desabilitadas</td></tr>';
 
     } catch(err) {
       document.getElementById('errorMsg').textContent = `Erro: ${err.message}`;
@@ -399,6 +442,45 @@
     setEl('mParadosWarnSub', parados3.length>0?'monitorar de perto':'nenhum em atenção', parados3.length>0?'warn':'ok');
     setEl('mHoje', hoje.length, 'ok');
     setEl('mHojeSub', `${Math.round(hoje.length/all.length*100)}% do total em dia`);
+
+    // ── Times ──
+    const VICTOR_ID = '365059000020303001';
+    const TEAM_PROC  = ['Logística','Comercial','Financeiro'];
+    const TEAM_TEC   = ['Defeito em produto','Suporte Técnico'];
+
+    const tOuv  = all.filter(t => t.assigneeId === VICTOR_ID);
+    const tOuvIds = new Set(tOuv.map(t => t.id));
+    const tProc = all.filter(t => !tOuvIds.has(t.id) && TEAM_PROC.some(cat => (t.classification||'').toLowerCase().includes(cat.toLowerCase())));
+    const tTec  = all.filter(t => !tOuvIds.has(t.id) && TEAM_TEC.some(cat => (t.classification||'').toLowerCase().includes(cat.toLowerCase())));
+
+    const renderTeamStats = (id, tickets) => {
+      const open    = tickets.filter(t => t.statusType === 'Open').length;
+      const hold    = tickets.filter(t => t.statusType === 'On Hold').length;
+      const crit    = tickets.filter(t => daysSince(t.modifiedTime) > 5).length;
+      document.getElementById(id).innerHTML = `
+        <div style="text-align:center">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--yellow)">${open}</div>
+          <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Abertos</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--orange)">${hold}</div>
+          <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Em Espera</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--red)">${crit}</div>
+          <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">+5 dias</div>
+        </div>`;
+    };
+
+    document.getElementById('tProcTotal').textContent = tProc.length;
+    document.getElementById('tProcBadge').textContent = tProc.length;
+    document.getElementById('tTecTotal').textContent  = tTec.length;
+    document.getElementById('tTecBadge').textContent  = tTec.length;
+    document.getElementById('tOuvTotal').textContent  = tOuv.length;
+    document.getElementById('tOuvBadge').textContent  = tOuv.length;
+    renderTeamStats('tProcStats', tProc);
+    renderTeamStats('tTecStats',  tTec);
+    renderTeamStats('tOuvStats',  tOuv);
 
     // Alert
     const alertBar = document.getElementById('alertBar');

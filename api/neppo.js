@@ -85,10 +85,13 @@ export default async function handler(req, res) {
 
       const all = data.results || [];
 
-      // Filtra pela operação SAC via groupConf
-      const sac = all.filter(s => 
-        s.groupConf?.operation?.operationName === 'Sac'
-      );
+      // Filtra sessões SAC: groupConf.name contém SAC ou groupList contém SAC
+      const sac = all.filter(s => {
+        const gName = (s.groupConf?.name || '').toUpperCase();
+        const gList = (s.groupList || '').toUpperCase();
+        const opName = (s.groupConf?.operation?.operationName || '').toUpperCase();
+        return gName.includes('SAC') || gList.includes('SAC') || opName === 'SAC';
+      });
 
       // Status dos agentes únicos
       const agentMap = {};
@@ -130,12 +133,13 @@ export default async function handler(req, res) {
     }
 
     if (path === 'debug') {
-      // Busca sessões ABERTAS (não fechadas)
+      // Tenta filtrar direto pela API com groupConf.name LIKE SAC
       const data = await neppoPost('/chatapi/1.0/api/user-session', {
         conditions: [
-          { key: 'status', value: 'CLOSED', operator: 'NEQ', logic: 'AND' }
+          { key: 'status', value: 'CLOSED', operator: 'NEQ', logic: 'AND' },
+          { key: 'groupConf.name', value: 'SAC', operator: 'LIKE', logic: 'AND' }
         ],
-        sort: false, page: 0, size: 5
+        sort: false, page: 0, size: 10
       }, token);
       const preview = (data.results || []).map(s => ({
         id: s.id,
@@ -145,7 +149,7 @@ export default async function handler(req, res) {
         operationName: s.groupConf?.operation?.operationName,
         groupList: s.groupList
       }));
-      return res.status(200).json({ total: data.size, preview });
+      return res.status(200).json({ total: data.size, rawSize: data.results?.length, preview, error: data.message });
     }
 
     // Debug genérico

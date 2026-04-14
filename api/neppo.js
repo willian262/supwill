@@ -95,9 +95,6 @@ export default async function handler(req, res) {
         if (page > 20) break; // segurança
       }
 
-      // Status dos agentes únicos — ignora bots e sessões sem agente humano
-      // Remove automações internas — mantém Bot SAC (fila de IA legítima)
-      // e remove "Desconhecido" (sessões sem agente atribuído ainda)
       const BOT_KEYWORDS = ['pesquisa', '@botserver', 'csat', 'nps', 'inatividade', 'inicial'];
       const isBot = name => {
         if (!name) return true;
@@ -105,10 +102,13 @@ export default async function handler(req, res) {
         return BOT_KEYWORDS.some(k => lower.includes(k));
       };
 
+      const now = Date.now();
+
+      // Mapa de agentes
       const agentMap = {};
       sac.forEach(s => {
         const name = s.agent?.displayName || null;
-        if (isBot(name)) return; // ignora bots e sem agente
+        if (isBot(name)) return;
         const agStatus = s.agent?.agent?.status || 'UNKNOWN';
         if (!agentMap[name]) {
           agentMap[name] = { name, status: agStatus, conversations: 0, waiting: 0 };
@@ -116,6 +116,47 @@ export default async function handler(req, res) {
         agentMap[name].conversations++;
         if (s.status === 'WAITING') agentMap[name].waiting++;
       });
+
+      // Fila por grupo
+      const groupQueue = {};
+      sac.filter(s => s.status === 'WAITING').forEach(s => {
+        const g = s.groupConf?.name || 'Sem grupo';
+        if (!groupQueue[g]) groupQueue[g] = 0;
+        groupQueue[g]++;
+      });
+
+      // Cliente há mais tempo aguardando
+      const waitingSessions = sac
+        .filter(s => s.status === 'WAITING' && s.createdAt)
+        .map(s => ({
+          name: s.user?.displayName || s.user?.phone || 'Desconhecido',
+          phone: s.user?.phone || '',
+          group: s.groupConf?.name || '',
+          waitMs: now - new Date(s.createdAt).getTime(),
+          agent: s.agent?.displayName || null
+        }))
+        .sort((a,b) => b.waitMs - a.waitMs);
+
+      // TME médio (tempo até ser atendido)
+      const attended = sac.filter(s => s.attendedAt && s.createdAt);
+      const avgTme = attended.length
+        ? Math.round(attended.reduce((sum, s) =>
+            sum + (new Date(s.attendedAt) - new Date(s.createdAt)), 0) / attended.length / 1000)
+        : null;
+
+      // TMA médio (tempo em atendimento)
+      const inAttendance = sac.filter(s => s.status === 'OPEN' && s.attendedAt && !isBot(s.agent?.displayName));
+      const avgTma = inAttendance.length
+        ? Math.round(inAttendance.reduce((sum, s) =>
+            sum + (now - new Date(s.attendedAt).getTime()), 0) / inAttendance.length / 1000)
+        : null;
+
+      // Histórico do dia
+      const todayBR = new Date(now - 3*3600000).toISOString().slice(0,10);
+      const abertasHoje = sac.filter(s => {
+        if (!s.createdAt) return false;
+        return new Date(new Date(s.createdAt).getTime() - 3*3600000).toISOString().slice(0,10) === todayBR;
+      }).length;
 
       const agents = Object.values(agentMap).sort((a,b) => b.conversations - a.conversations);
 
@@ -126,11 +167,28 @@ export default async function handler(req, res) {
       const waiting  = sac.filter(s => s.status === 'WAITING').length;
       const inQueue  = sac.filter(s => isBot(s.agent?.displayName)).length;
 
+      const fmtTime = secs => {
+        if (!secs) return null;
+        if (secs < 60) return `${secs}s`;
+        if (secs < 3600) return `${Math.floor(secs/60)}m ${secs%60}s`;
+        return `${Math.floor(secs/3600)}h ${Math.floor((secs%3600)/60)}m`;
+      };
+
       return res.status(200).json({
         totalConversations: sac.length,
         totalAgents: agents.length,
         online, paused, offline,
         waiting, inQueue,
+        avgTme: avgTme ? fmtTime(avgTme) : null,
+        avgTma: avgTma ? fmtTime(avgTma) : null,
+        abertasHoje,
+        longestWaiting: waitingSessions.slice(0,5).map(s => ({
+          name: s.name,
+          group: s.group,
+          agent: s.agent,
+          waitTime: fmtTime(Math.round(s.waitMs/1000))
+        })),
+        groupQueue: Object.entries(groupQueue).sort((a,b)=>b[1]-a[1]).map(([g,c])=>({group:g,count:c})),
         agents
       });
     }
@@ -161,16 +219,11 @@ export default async function handler(req, res) {
         status: s.status,
         agentName: s.agent?.displayName,
         groupName: s.groupConf?.name,
+        operationName: s.groupConf?.operation?.operationName,
         createdAt: s.createdAt,
         attendedAt: s.attendedAt,
-        availableAt: s.availableAt,
         tme: s.tme,
-        tma: s.tma,
-        tmi: s.tmi,
-        tmic: s.tmic,
-        tmia: s.tmia,
-        userDisplayName: s.user?.displayName,
-        userPhone: s.user?.phone
+        userDisplayName: s.user?.displayName
       }));
       return res.status(200).json({ total: data.size, rawSize: data.results?.length, preview, error: data.message });
     }

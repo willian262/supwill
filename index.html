@@ -416,10 +416,10 @@
       <div class="kpi-value" id="mTma">—</div>
       <div class="kpi-sub" id="mTmaSub"></div>
     </div>
-    <div class="kpi" style="--kpi-accent:var(--red)">
-      <div class="kpi-label">Escalados</div>
-      <div class="kpi-value" id="mEsc">—</div>
-      <div class="kpi-sub" id="mEscSub"></div>
+    <div class="kpi" style="--kpi-accent:var(--purple)">
+      <div class="kpi-label">Top Categoria</div>
+      <div class="kpi-value" style="font-size:28px;letter-spacing:-1px" id="mTopCat">—</div>
+      <div class="kpi-sub" id="mTopCatSub"></div>
     </div>
   </div>
 
@@ -451,6 +451,22 @@
             </div>
           </div>
           <div class="agent-list" id="agentRows"></div>
+        </div>
+      </div>
+
+      <!-- CLASSIFICAÇÃO -->
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Top 5 — Classificação / Subclassificação</span>
+          <span class="card-badge" id="classTotal">0 com classe</span>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="crit-table">
+            <thead><tr>
+              <th>#</th><th>Classificação</th><th>Subclassificação</th><th style="text-align:right">Tickets</th><th style="text-align:right">%</th>
+            </tr></thead>
+            <tbody id="classRows"></tbody>
+          </table>
         </div>
       </div>
 
@@ -569,8 +585,19 @@
     setEl('mTma', avgH!==null?avgH+'h':'N/A');
     setEl('mTmaSub', avgH!==null?(avgH<=48?'dentro da meta':'acima da meta'):'', avgH!==null&&avgH<=48?'ok':'warn');
 
-    setEl('mEsc', escalated.length, escalated.length>5?'danger':escalated.length>0?'warn':'ok');
-    setEl('mEscSub', escalated.length>0?`${escalated.length} com priority = Vencido`:'nenhum escalado', escalated.length>0?'danger':'ok');
+    // Top categoria
+    const catCount = {};
+    allActive.forEach(t => {
+      if (t.category) catCount[t.category] = (catCount[t.category]||0)+1;
+    });
+    const topCat = Object.entries(catCount).sort((a,b)=>b[1]-a[1]);
+    if (topCat.length > 0) {
+      setEl('mTopCat', topCat[0][0]);
+      setEl('mTopCatSub', `${topCat[0][1]} tickets · ${topCat.length} categorias`);
+    } else {
+      setEl('mTopCat', 'N/A');
+      setEl('mTopCatSub', 'sem categoria definida');
+    }
 
     // Alert
     const ab = document.getElementById('alertBar');
@@ -583,7 +610,7 @@
     document.getElementById('typeGrid').innerHTML = [
       {label:'Abertos',  val:open.length,     color:'var(--yellow)'},
       {label:'Em Espera',val:pending.length,   color:'var(--orange)'},
-      {label:'Escalados',val:escalated.length, color:'var(--red)'},
+
     ].map(s=>`
       <div class="type-box">
         <div class="type-box-label">${s.label}</div>
@@ -626,14 +653,14 @@
     escalated.forEach(t=>add(t,'escalated'));
     const agents = Object.entries(aMap).map(([n,s])=>({n,...s,total:s.open+s.pending+s.escalated})).sort((a,b)=>b.total-a.total);
     const maxA = Math.max(...agents.map(a=>a.total),1);
-    const LIM = 12;
+    const LIM_OK = 30; const LIM_WARN = 45; const LIM_DANGER = 50;
     const PAL = [['#2a1f10','var(--yellow)'],['#1e1525','var(--purple)'],['#0f2018','var(--green)'],['#1f1010','var(--red)'],['#0f1a20','var(--cyan)'],['#201510','var(--orange)']];
     document.getElementById('agentRows').innerHTML = agents.map((a,i)=>{
       const [bg,fg]=PAL[i%PAL.length];
       const init=a.n.split(' ').filter(Boolean).map(w=>w[0]).slice(0,2).join('').toUpperCase();
       const ow=Math.round(a.open/maxA*100), pw=Math.round(a.pending/maxA*100), ew=Math.round(a.escalated/maxA*100);
-      const cls=a.total>=LIM?'danger':a.total>=LIM*.75?'warn':'ok';
-      const sub=a.total>=LIM?`▲ Sobrecarga — ${a.total}`:a.escalated>0?`${a.total} · ${a.escalated} esc.`:`${a.total} tickets`;
+      const cls=a.total>=LIM_DANGER?'danger':a.total>=LIM_OK?'warn':'ok';
+      const sub=a.total>=LIM_DANGER?`▲ Sobrecarga — ${a.total}`:a.escalated>0?`${a.total} · ${a.escalated} esc.`:`${a.total} tickets`;
       return `<div class="agent-row">
         <div class="avatar" style="background:${bg};color:${fg}">${init}</div>
         <div>
@@ -648,6 +675,33 @@
         <div class="agent-total ${cls}">${a.total}</div>
       </div>`;
     }).join('')||'<div class="no-data">Nenhum agente ativo</div>';
+
+    // Classificação / Subclassificação
+    const classMap = {};
+    allActive.forEach(t => {
+      const cat = t.category || '(sem classificação)';
+      const sub = t.subCategory || '(sem subclassificação)';
+      const key = cat + '|||' + sub;
+      classMap[key] = (classMap[key]||0) + 1;
+    });
+    const classEntries = Object.entries(classMap)
+      .map(([k,v]) => { const [cat,sub]=k.split('|||'); return {cat,sub,count:v}; })
+      .sort((a,b)=>b.count-a.count);
+    const classWithData = classEntries.filter(e => e.cat !== '(sem classificação)');
+    const top5 = classWithData.slice(0,5);
+    const totalClass = classWithData.reduce((s,e)=>s+e.count,0);
+    document.getElementById('classTotal').textContent = `${totalClass} classificados`;
+    const RANK_COLORS = ['var(--yellow)','var(--orange)','var(--purple)','var(--cyan)','var(--green)'];
+    document.getElementById('classRows').innerHTML = top5.length ? top5.map((e,i) => {
+      const pct = totalClass > 0 ? Math.round(e.count/totalClass*100) : 0;
+      return `<tr>
+        <td style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;color:${RANK_COLORS[i]};width:32px">${i+1}</td>
+        <td style="font-size:12px;color:var(--muted)">${e.cat}</td>
+        <td style="font-size:12px;color:var(--text);font-weight:500">${e.sub}</td>
+        <td style="text-align:right;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:${RANK_COLORS[i]}">${e.count}</td>
+        <td style="text-align:right;font-size:11px;color:var(--muted);min-width:40px">${pct}%</td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="5" class="no-data">Sem dados de classificação</td></tr>';
 
     // Críticos
     const crit = allActive.filter(t=>t.dueDate).map(t=>({...t,msLeft:new Date(t.dueDate)-now})).filter(t=>t.msLeft<12*3600000).sort((a,b)=>a.msLeft-b.msLeft).slice(0,10);

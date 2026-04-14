@@ -160,7 +160,7 @@
     .dash { padding:18px 24px; display:flex; flex-direction:column; gap:14px; }
 
     /* KPI STRIP */
-    .kpi-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+    .kpi-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:4px; }
     .kpi {
       background:var(--surface);
       border:1px solid var(--border);
@@ -554,6 +554,9 @@
         'ATUALIZADO ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
       document.getElementById('liveBadge').classList.add('show');
       show('viewDash');
+
+      // Carrega classificações em background (não bloqueia o painel)
+      loadClassifications(allActive).catch(()=>{});
     } catch(err) {
       document.getElementById('errorMsg').textContent = `Erro: ${err.message}`;
       show('viewError');
@@ -676,34 +679,6 @@
       </div>`;
     }).join('')||'<div class="no-data">Nenhum agente ativo</div>';
 
-    // Classificação / Subclassificação
-    const classMap = {};
-    allActive.forEach(t => {
-      const cat = t.classification || null;
-      const sub = (t.cf && t.cf.cf_sub_classificacao) || null;
-      if (!cat) return; // ignora sem classificação
-      const key = cat + '|||' + (sub || '—');
-      classMap[key] = (classMap[key]||0) + 1;
-    });
-    const classEntries = Object.entries(classMap)
-      .map(([k,v]) => { const [cat,sub]=k.split('|||'); return {cat,sub,count:v}; })
-      .sort((a,b)=>b.count-a.count);
-    const classWithData = classEntries;
-    const top5 = classWithData.slice(0,5);
-    const totalClass = classWithData.reduce((s,e)=>s+e.count,0);
-    document.getElementById('classTotal').textContent = `${totalClass} classificados`;
-    const RANK_COLORS = ['var(--yellow)','var(--orange)','var(--purple)','var(--cyan)','var(--green)'];
-    document.getElementById('classRows').innerHTML = top5.length ? top5.map((e,i) => {
-      const pct = totalClass > 0 ? Math.round(e.count/totalClass*100) : 0;
-      return `<tr>
-        <td style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;color:${RANK_COLORS[i]};width:32px">${i+1}</td>
-        <td style="font-size:12px;color:var(--muted)">${e.cat}</td>
-        <td style="font-size:12px;color:var(--text);font-weight:500">${e.sub}</td>
-        <td style="text-align:right;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:${RANK_COLORS[i]}">${e.count}</td>
-        <td style="text-align:right;font-size:11px;color:var(--muted);min-width:40px">${pct}%</td>
-      </tr>`;
-    }).join('') : '<tr><td colspan="5" class="no-data">Sem dados de classificação</td></tr>';
-
     // Críticos
     const crit = allActive.filter(t=>t.dueDate).map(t=>({...t,msLeft:new Date(t.dueDate)-now})).filter(t=>t.msLeft<12*3600000).sort((a,b)=>a.msLeft-b.msLeft).slice(0,10);
     document.getElementById('critCount').textContent = crit.length;
@@ -730,6 +705,60 @@
         <td>${fSla(t.msLeft)}</td>
       </tr>`;
     }).join('') : '<tr><td colspan="5" class="no-data">Nenhum ticket crítico no momento ✓</td></tr>';
+  }
+
+  // Carrega classificações buscando tickets individuais em paralelo (background)
+  async function loadClassifications(tickets) {
+    document.getElementById('classRows').innerHTML = '<tr><td colspan="5" class="no-data" style="color:var(--muted)">Carregando classificações...</td></tr>';
+    
+    // Pega os IDs dos tickets ativos (máx 100 para não sobrecarregar)
+    const sample = tickets.slice(0, 100);
+    const BATCH = 10;
+    const details = [];
+    
+    for (let i = 0; i < sample.length; i += BATCH) {
+      const chunk = sample.slice(i, i + BATCH);
+      const results = await Promise.all(
+        chunk.map(t => zoho(`tickets/${t.id}`, {}).catch(() => null))
+      );
+      results.forEach(r => { if (r && r.classification) details.push(r); });
+    }
+
+    // Monta mapa classificação/subclassificação
+    const classMap = {};
+    details.forEach(t => {
+      const cat = t.classification || null;
+      const sub = (t.cf && t.cf.cf_sub_classificacao) || '—';
+      if (!cat) return;
+      const key = cat + '|||' + sub;
+      classMap[key] = (classMap[key]||0) + 1;
+    });
+
+    const entries = Object.entries(classMap)
+      .map(([k,v]) => { const [cat,sub]=k.split('|||'); return {cat,sub,count:v}; })
+      .sort((a,b)=>b.count-a.count);
+
+    const top5 = entries.slice(0,5);
+    const total = entries.reduce((s,e)=>s+e.count,0);
+    document.getElementById('classTotal').textContent = `${total} de ${sample.length} classificados`;
+    
+    const RANK_COLORS = ['var(--yellow)','var(--orange)','var(--purple)','var(--cyan)','var(--green)'];
+    document.getElementById('classRows').innerHTML = top5.length ? top5.map((e,i) => {
+      const pct = total > 0 ? Math.round(e.count/total*100) : 0;
+      return `<tr>
+        <td style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;color:${RANK_COLORS[i]};width:32px">${i+1}</td>
+        <td style="font-size:12px;color:var(--muted)">${e.cat}</td>
+        <td style="font-size:12px;color:var(--text);font-weight:500">${e.sub}</td>
+        <td style="text-align:right;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:${RANK_COLORS[i]}">${e.count}</td>
+        <td style="text-align:right;font-size:11px;color:var(--muted);min-width:40px">${pct}%</td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="5" class="no-data">Sem dados de classificação</td></tr>';
+
+    // Atualiza KPI top categoria
+    if (entries.length > 0) {
+      setEl('mTopCat', entries[0].cat);
+      setEl('mTopCatSub', `${entries[0].count} tickets · ${entries.length} categorias`);
+    }
   }
 
   show('viewLoading');

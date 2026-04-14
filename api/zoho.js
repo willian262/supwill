@@ -1,24 +1,41 @@
+// Cache global — persiste enquanto a função estiver "quente"
 let _cachedToken = null;
 let _tokenExpires = 0;
+let _tokenPending = null; // evita chamadas paralelas ao token
 
 async function getAccessToken() {
   if (_cachedToken && Date.now() < _tokenExpires) return _cachedToken;
-  const tokenParams = new URLSearchParams({
-    refresh_token: process.env.ZOHO_REFRESH_TOKEN,
-    client_id:     process.env.ZOHO_CLIENT_ID,
-    client_secret: process.env.ZOHO_CLIENT_SECRET,
-    grant_type:    'refresh_token'
-  });
-  const tokenRes = await fetch('https://accounts.zoho.com/oauth/v2/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: tokenParams
-  });
-  const tokenData = await tokenRes.json();
-  if (!tokenData.access_token) throw new Error('Zoho retornou: ' + JSON.stringify(tokenData));
-  _cachedToken  = tokenData.access_token;
-  _tokenExpires = Date.now() + 55 * 60 * 1000;
-  return _cachedToken;
+
+  // Se já tem uma chamada pendente, aguarda ela terminar
+  if (_tokenPending) return _tokenPending;
+
+  _tokenPending = (async () => {
+    try {
+      const tokenParams = new URLSearchParams({
+        refresh_token: process.env.ZOHO_REFRESH_TOKEN,
+        client_id:     process.env.ZOHO_CLIENT_ID,
+        client_secret: process.env.ZOHO_CLIENT_SECRET,
+        grant_type:    'refresh_token'
+      });
+      const tokenRes = await fetch('https://accounts.zoho.com/oauth/v2/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: tokenParams
+      });
+      const tokenData = await tokenRes.json();
+      if (!tokenData.access_token) {
+        throw new Error('Zoho retornou: ' + JSON.stringify(tokenData));
+      }
+      _cachedToken  = tokenData.access_token;
+      // Cache por 50 minutos (access token dura 1h)
+      _tokenExpires = Date.now() + 50 * 60 * 1000;
+      return _cachedToken;
+    } finally {
+      _tokenPending = null;
+    }
+  })();
+
+  return _tokenPending;
 }
 
 async function zohoRequest(path, params, accessToken) {
@@ -48,13 +65,12 @@ export default async function handler(req, res) {
   try {
     accessToken = await getAccessToken();
   } catch (err) {
-    return res.status(401).json({ error: 'Falha ao obter token', detail: err.message, hint: 'Verifique as variáveis de ambiente no Vercel' });
+    return res.status(401).json({ error: 'Falha ao obter token', detail: err.message });
   }
 
   try {
     if (path !== 'tickets') {
-      // Alguns endpoints não aceitam limit (ex: fields)
-      const needsLimit = ['agents','departments','contacts','teams','products'].some(p => path.startsWith(p));
+      const needsLimit = ['agents','departments','contacts','teams'].some(p => path.startsWith(p));
       const reqParams = needsLimit ? { ...params, limit: params.limit || '100' } : { ...params };
       const data = await zohoRequest(path, reqParams, accessToken);
       return res.status(200).json(data);
@@ -64,19 +80,20 @@ export default async function handler(req, res) {
     const CLOSED   = ['Fechado', 'Fechado Inatividade'];
     const LIMIT    = 100;
 
-    // Busca paralela: 20 páginas simultâneas (2000 tickets por rodada)
-    // Para quando uma rodada inteira retorna vazio
+    // Busca paralela em lotes de 20
     let allTickets = [];
     let from = 1;
-    const MAX = 5000;
-
-    while (from <= MAX) {
+    while (from <= 5000) {
       const froms = [];
-      for (let i = 0; i < 20 && (from + i * LIMIT) <= MAX; i++) {
+      for (let i = 0; i < 20 && (from + i * LIMIT) <= 5000; i++) {
         froms.push(from + i * LIMIT);
       }
       const results = await Promise.all(
-        froms.map(f => zohoRequest('tickets', { from: f, limit: LIMIT, fields: 'id,ticketNumber,subject,status,statusType,priority,dueDate,assigneeId,departmentId,createdTime,modifiedTime,classification' }, accessToken))
+        froms.map(f => zohoRequest('tickets', {
+          from: f,
+          limit: LIMIT,
+          fields: 'id,ticketNumber,subject,status,statusType,priority,dueDate,assigneeId,departmentId,createdTime,modifiedTime,classification'
+        }, accessToken))
       );
       let gotAny = false;
       for (const r of results) {
@@ -88,7 +105,6 @@ export default async function handler(req, res) {
       from += froms.length * LIMIT;
     }
 
-    // Filtra SAC + ativos
     const filtered = allTickets
       .filter(t => t.departmentId === SAC_DEPT)
       .filter(t => !CLOSED.includes(t.status));

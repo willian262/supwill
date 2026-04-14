@@ -117,12 +117,19 @@ export default async function handler(req, res) {
         if (s.status === 'WAITING') agentMap[name].waiting++;
       });
 
-      // Fila por grupo
+      // Fila por grupo (aguardando) e total por grupo
       const groupQueue = {};
+      const groupTotal = {};
       sac.filter(s => s.status === 'WAITING').forEach(s => {
         const g = s.groupConf?.name || 'Sem grupo';
         if (!groupQueue[g]) groupQueue[g] = 0;
         groupQueue[g]++;
+      });
+      sac.filter(s => !isBot(s.agent?.displayName)).forEach(s => {
+        const g = s.groupConf?.name || 'Sem grupo';
+        if (!groupTotal[g]) groupTotal[g] = { total: 0, waiting: 0 };
+        groupTotal[g].total++;
+        if (s.status === 'WAITING') groupTotal[g].waiting++;
       });
 
       // Cliente há mais tempo aguardando
@@ -189,6 +196,7 @@ export default async function handler(req, res) {
           waitTime: fmtTime(Math.round(s.waitMs/1000))
         })),
         groupQueue: Object.entries(groupQueue).sort((a,b)=>b[1]-a[1]).map(([g,c])=>({group:g,count:c})),
+        groupTotal: Object.entries(groupTotal).sort((a,b)=>b[1].total-a[1].total).map(([g,v])=>({group:g,...v})),
         agents
       });
     }

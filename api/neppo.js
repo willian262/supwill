@@ -128,17 +128,22 @@ export default async function handler(req, res) {
     }
 
     if (path === 'debug') {
-      // Mostra campos relevantes das primeiras 5 sessões
+      // Busca sessões ABERTAS (não fechadas)
       const data = await neppoPost('/chatapi/1.0/api/user-session', {
-        conditions: [], sort: false, page: 0, size: 5
+        conditions: [
+          { key: 'status', value: 'CLOSED', operator: 'NEQ', logic: 'AND' }
+        ],
+        sort: false, page: 0, size: 5
       }, token);
       const preview = (data.results || []).map(s => ({
         id: s.id,
         operationName: s.operationName,
         groupName: s.groupName,
         status: s.status,
+        channel: s.channel,
         agentProfile: s.agent?.profile?.name,
         agentName: s.agent?.displayName,
+        allKeys: Object.keys(s)
       }));
       return res.status(200).json({ total: data.size, preview });
     }

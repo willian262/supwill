@@ -96,7 +96,7 @@
     .health-col-title { font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; }
     .health-col-count { font-family:'Barlow Condensed',sans-serif; font-size:32px; font-weight:800; line-height:1; margin-bottom:4px; }
     .health-col-sub { font-size:11px; color:var(--muted); margin-bottom:12px; }
-    .health-ticket-list { display:flex; flex-direction:column; gap:6px; max-height:200px; overflow-y:auto; }
+    .health-ticket-list { display:flex; flex-direction:column; gap:6px; max-height:400px; overflow-y:auto; padding-right:4px; }
     .health-ticket { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 10px; background:var(--surface2); border-radius:5px; border-left:2px solid var(--indicator-color); }
     .health-ticket-left { min-width:0; }
     .health-ticket-num { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; color:var(--yellow); }
@@ -437,7 +437,7 @@
     const renderHealthList = (id, tickets, color, showDays) => {
       const el = document.getElementById(id);
       if (!tickets.length) { el.innerHTML = '<div class="no-data" style="padding:8px 0;font-size:10px">nenhum</div>'; return; }
-      el.innerHTML = tickets.slice(0,8).map(t => {
+      el.innerHTML = tickets.map(t => {
         const days = daysSince(t.modifiedTime);
         const daysLabel = days < 1 ? 'hoje' : `${Math.floor(days)}d`;
         return `<div class="health-ticket" style="--indicator-color:${color}">

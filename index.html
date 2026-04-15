@@ -544,6 +544,12 @@
           </div>
         </div>
 
+        <!-- Pódio de ligações do dia -->
+        <div id="gotoPodioCont" style="display:none">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--yellow);margin-bottom:10px">🏆 Top 3 — Ligações Atendidas Hoje</div>
+          <div id="gotoPodio" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"></div>
+        </div>
+
         <!-- Linha: Chamadas do dia + Agentes -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
 
@@ -1240,6 +1246,33 @@
               <div style="text-align:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--muted)">${a.avgDuration}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">duração</div></div>
             </div>
           </div>`).join('');
+      }
+
+      // Pódio top 3 ligações
+      const top3 = [...callAgents].sort((a,b) => b.total - a.total).slice(0,3);
+      if (top3.length > 0) {
+        document.getElementById('gotoPodioCont').style.display = 'block';
+        const MEDALS = ['🥇','🥈','🥉'];
+        const COLORS = ['var(--yellow)','#94a3b8','var(--orange)'];
+        // Reordena: 2º, 1º, 3º para visual de pódio
+        const order = top3.length >= 3 ? [top3[1], top3[0], top3[2]] : top3.length === 2 ? [top3[1], top3[0]] : top3;
+        const ranks = top3.length >= 3 ? [1,0,2] : top3.length === 2 ? [1,0] : [0];
+        document.getElementById('gotoPodio').innerHTML = order.map((a,vi) => {
+          const rank = ranks[vi];
+          const color = COLORS[rank];
+          const medal = MEDALS[rank];
+          const isFirst = rank === 0;
+          return `<div style="background:var(--surface2);border:1px solid ${color}33;border-radius:8px;padding:16px;text-align:center;${isFirst?'box-shadow:0 0 16px '+color+'22':''};margin-top:${isFirst?'0':'14px'}">
+            <div style="font-size:${isFirst?'28':'22'}px;margin-bottom:6px">${medal}</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:var(--text);margin-bottom:10px">${a.name.split(' ')[0]}</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:${isFirst?'48':'36'}px;font-weight:800;line-height:1;color:${color}">${a.total}</div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">ligações</div>
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 8px">
+              <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Duração Média</div>
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:${color}">${a.avgDuration}</div>
+            </div>
+          </div>`;
+        }).join('');
       }
 
       document.getElementById('gotoAgents').innerHTML = agents.map(a => {

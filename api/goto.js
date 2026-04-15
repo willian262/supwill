@@ -139,8 +139,31 @@ export default async function handler(req, res) {
     }
 
     if (path === 'phone-numbers') {
-      // Números de telefone
       const data = await gotoGet(`/voice-admin/v1/phone-numbers?accountKey=${ACCOUNT_KEY}`, token);
+      return res.status(200).json(data);
+    }
+
+    if (path === 'call-reports') {
+      // Relatório de chamadas - endpoint correto
+      const data = await gotoGet(
+        `/call-events-report/v1/report-summaries?accountKey=${ACCOUNT_KEY}&startTime=${startOfDay}&endTime=${now}&pageSize=100`,
+        token
+      );
+      return res.status(200).json(data);
+    }
+
+    if (path === 'cr-reports') {
+      // CR reports
+      const data = await gotoGet(
+        `/cr/v1/accounts/${ACCOUNT_KEY}/reports?startTime=${startOfDay}&endTime=${now}`,
+        token
+      );
+      return res.status(200).json(data);
+    }
+
+    if (path === 'presence') {
+      // Presença dos usuários
+      const data = await gotoGet(`/presence/v1/presence?accountKey=${ACCOUNT_KEY}`, token);
       return res.status(200).json(data);
     }
 

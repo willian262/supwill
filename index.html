@@ -339,6 +339,9 @@
         <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
           <div style="width:10px;height:10px;border-radius:2px;background:var(--cyan)"></div>Técnico
         </div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
+          <div style="width:10px;height:10px;border-radius:2px;background:var(--subtle)"></div>Sem classificação
+        </div>
         <div style="display:flex;gap:10px" id="teamAvgBadges"></div>
       </div>
     </div>
@@ -1083,6 +1086,9 @@
       const tecFech  = {};
       days.forEach(d => { procFech[d] = 0; tecFech[d] = 0; });
 
+      const semClsFech = {};
+      days.forEach(d => { semClsFech[d] = 0; });
+
       closed.forEach(t => {
         const ref = t.closedTime || t.modifiedTime;
         if (!ref) return;
@@ -1091,10 +1097,12 @@
         const cls = (t.classification||'').toLowerCase();
         if (TEAM_PROC.some(p => cls.includes(p.toLowerCase()))) procFech[dBR]++;
         else if (TEAM_TEC.some(p => cls.includes(p.toLowerCase()))) tecFech[dBR]++;
+        else semClsFech[dBR]++;
       });
 
-      const procData30 = days.map(d => procFech[d]);
-      const tecData30  = days.map(d => tecFech[d]);
+      const procData30  = days.map(d => procFech[d]);
+      const tecData30   = days.map(d => tecFech[d]);
+      const semClsData30 = days.map(d => semClsFech[d]);
 
       // Médias diárias (só dias com pelo menos 1 fechamento)
       const avg = arr => {
@@ -1110,6 +1118,9 @@
         </div>
         <div style="background:rgba(34,211,238,0.1);border:1px solid rgba(34,211,238,0.2);border-radius:4px;padding:2px 8px;font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--cyan)">
           Téc: ~${avgTec}/dia
+        </div>
+        <div style="background:rgba(136,133,128,0.1);border:1px solid rgba(136,133,128,0.2);border-radius:4px;padding:2px 8px;font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted)">
+          Sem class.: ~${avg(semClsData30)}/dia
         </div>`;
 
       if (window._teamChart) window._teamChart.destroy();
@@ -1120,7 +1131,8 @@
           labels,
           datasets: [
             { label: 'Processos', data: procData30, backgroundColor: 'rgba(255,208,76,0.7)', borderColor: '#FFD04C', borderWidth: 1, borderRadius: 3 },
-            { label: 'Técnico',   data: tecData30,  backgroundColor: 'rgba(34,211,238,0.7)', borderColor: '#22d3ee', borderWidth: 1, borderRadius: 3 }
+            { label: 'Técnico',   data: tecData30,   backgroundColor: 'rgba(34,211,238,0.7)', borderColor: '#22d3ee', borderWidth: 1, borderRadius: 3 },
+            { label: 'Sem class.', data: semClsData30, backgroundColor: 'rgba(136,133,128,0.5)', borderColor: '#888580',  borderWidth: 1, borderRadius: 3 }
           ]
         },
         options: {

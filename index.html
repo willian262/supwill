@@ -755,26 +755,6 @@
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--red)">${crit}</div>
           <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">+5 dias</div>
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:12px;padding:8px 4px;margin-bottom:4px">
-          <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)">
-            <div style="width:8px;height:8px;border-radius:2px;background:var(--yellow);flex-shrink:0"></div>
-            <span><b style="color:var(--text)">Total</b> — todas as ligações do agente</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)">
-            <div style="width:8px;height:8px;border-radius:2px;background:var(--green);flex-shrink:0"></div>
-            <span><b style="color:var(--text)">Da Fila SAC</b> — cliente entrou pelas filas SAC Processos ou SAC Técnico</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)">
-            <div style="width:8px;height:8px;border-radius:2px;background:var(--purple);flex-shrink:0"></div>
-            <span><b style="color:var(--text)">Transferidas</b> — cliente transferido de outro ramal (ex: Comercial) diretamente para o agente</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)">
-            <div style="width:8px;height:8px;border-radius:2px;background:var(--orange);flex-shrink:0"></div>
-            <span><b style="color:var(--text)">Saídas</b> — ligações feitas pelo agente para clientes</span>
-          </div>
-        </div>`;
-    };
-
     document.getElementById('tProcTotal').textContent = tProc.length;
     document.getElementById('tProcBadge').textContent = tProc.length;
     document.getElementById('tTecTotal').textContent  = tTec.length;
@@ -1261,8 +1241,25 @@
             <div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Saídas</div>
             <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--orange)">${totalOutbound}</div>
           </div>
-        </div>`;
-
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;padding:8px 4px;margin-bottom:4px">
+          <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)">
+            <div style="width:8px;height:8px;border-radius:2px;background:var(--yellow);flex-shrink:0"></div>
+            <span><b style="color:var(--text)">Total</b> — todas as ligações do agente</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)">
+            <div style="width:8px;height:8px;border-radius:2px;background:var(--green);flex-shrink:0"></div>
+            <span><b style="color:var(--text)">Da Fila SAC</b> — cliente entrou pelas filas SAC Processos ou SAC Técnico</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)">
+            <div style="width:8px;height:8px;border-radius:2px;background:var(--purple);flex-shrink:0"></div>
+            <span><b style="color:var(--text)">Transferidas</b> — cliente transferido de outro ramal (ex: Comercial) diretamente para o agente</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)">
+            <div style="width:8px;height:8px;border-radius:2px;background:var(--orange);flex-shrink:0"></div>
+            <span><b style="color:var(--text)">Saídas</b> — ligações feitas pelo agente para clientes</span>
+          </div>
+        </div>\`;
       // Lista de agentes
       const agentsHtml = callAgents.length === 0
         ? '<div style="padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;text-align:center;color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase">Sem ligações registradas hoje</div>'

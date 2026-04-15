@@ -89,6 +89,10 @@ export default async function handler(req, res) {
           sort: true, sortColumn: 'id', direction: 'DESC', page, size: 50
         }, token);
 
+        // Se retornou erro de autenticação, abortar
+        if (data.fault || data.message || data.error) {
+          return res.status(200).json({ _tokenError: data.fault || data.message || data.error, totalConversations: 0, agents: [], totalAgents: 0, online: 0, paused: 0, offline: 0, waiting: 0, inQueue: 0, avgTme: null, avgTma: null, abertasHoje: 0, longestWaiting: [], groupQueue: [], groupTotal: [] });
+        }
         const batch = data.results || [];
         if (batch.length === 0) break;
         sac = sac.concat(batch);

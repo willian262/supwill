@@ -1227,18 +1227,14 @@
           <!-- Entradas -->
           <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px">
             <div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Ligacoes Recebidas</div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
               <div style="text-align:center">
-                <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--yellow)">${totalEntradas}</div>
-                <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Total</div>
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:800;color:var(--yellow)">${totalEntradas}</div>
+                <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Total Recebidas</div>
               </div>
               <div style="text-align:center">
-                <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--green)">${totalQueue}</div>
-                <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Da Fila</div>
-              </div>
-              <div style="text-align:center">
-                <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--purple)">${totalTransfer}</div>
-                <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Transferidas</div>
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:800;color:var(--green)">${totalQueue}</div>
+                <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Da Fila SAC</div>
               </div>
             </div>
           </div>
@@ -1266,15 +1262,11 @@
           </div>
           <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)">
             <div style="width:8px;height:8px;border-radius:2px;background:var(--green);flex-shrink:0"></div>
-            <span><b style="color:var(--text)">Da Fila SAC</b> — cliente entrou pelas filas SAC Processos ou SAC Técnico</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)">
-            <div style="width:8px;height:8px;border-radius:2px;background:var(--purple);flex-shrink:0"></div>
-            <span><b style="color:var(--text)">Transferidas</b> — cliente transferido de outro ramal (ex: Comercial) diretamente para o agente</span>
+            <span><b style="color:var(--text)">Da Fila SAC</b> — ligacoes recebidas pelas filas SAC (inclui transferencias — limitacao da API GoTo)</span>
           </div>
           <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)">
             <div style="width:8px;height:8px;border-radius:2px;background:var(--orange);flex-shrink:0"></div>
-            <span><b style="color:var(--text)">Saídas</b> — ligações feitas pelo agente para clientes</span>
+            <span><b style="color:var(--text)">Saidas</b> — ligacoes feitas pelo agente para clientes</span>
           </div>
           <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);background:rgba(255,208,76,0.06);border:1px solid rgba(255,208,76,0.15);border-radius:5px;padding:6px 10px;width:100%;margin-top:4px">
             <span style="color:var(--yellow);font-weight:700">!</span>
@@ -1285,7 +1277,6 @@
       const agentsHtml = callAgents.length === 0
         ? '<div style="padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;text-align:center;color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase">Sem ligações registradas hoje</div>'
         : callAgents.map(a => {
-            const transfer = a.inbound - a.queueCalls;
             return `
             <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 12px">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
@@ -1293,16 +1284,14 @@
                 <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;color:var(--muted)">${a.avgDuration} média</div>
               </div>
               <div style="display:flex;gap:1px;height:4px;border-radius:2px;overflow:hidden;margin-bottom:6px">
-                <div style="background:var(--green);flex:${a.queueCalls}"></div>
-                <div style="background:var(--purple);flex:${transfer}"></div>
+                <div style="background:var(--green);flex:${a.inbound}"></div>
                 <div style="background:var(--orange);flex:${a.outbound}"></div>
                 <div style="background:var(--border);flex:${Math.max(maxCalls - a.total, 0)}"></div>
               </div>
               <div style="display:flex;gap:10px">
                 <div style="text-align:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--yellow)">${a.total}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">total</div></div>
-                <div style="text-align:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--green)">${a.queueCalls}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">fila</div></div>
-                <div style="text-align:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--purple)">${transfer}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">transf.</div></div>
-                <div style="text-align:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--orange)">${a.outbound}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">saídas</div></div>
+                <div style="text-align:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--green)">${a.inbound}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">receb.</div></div>
+                <div style="text-align:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--orange)">${a.outbound}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">saidas</div></div>
               </div>
             </div>`;
           }).join('');

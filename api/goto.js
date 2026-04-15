@@ -228,17 +228,16 @@ export default async function handler(req, res) {
         });
       } catch(e) {}
 
+      // Normaliza string: minúsculas + remove acentos
+      const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+
       // Função para checar se nome GoTo bate com algum agente Neppo
-      // GoTo usa "Nome Sobrenome - Departamento", Neppo usa "Nome Sobrenome"
       const isSacAgent = (gotoName) => {
         if (!gotoName || !neppoAgentNames.length) return true;
-        // Remove sufixo " - Departamento" do nome GoTo
-        const cleanGoto = gotoName.toLowerCase().replace(/\s*-\s*\w.*$/, '').trim();
+        const cleanGoto = norm(gotoName).replace(/\s*-\s*\w.*$/, '').trim();
         return neppoAgentNames.some(neppoName => {
-          const cleanNeppo = neppoName.replace(/\s*-\s*\w.*$/, '').trim();
-          // Compara nome limpo diretamente
+          const cleanNeppo = norm(neppoName).replace(/\s*-\s*\w.*$/, '').trim();
           if (cleanGoto === cleanNeppo) return true;
-          // Ou verifica se primeiro nome + sobrenome batem
           const parts = cleanNeppo.split(' ').filter(Boolean);
           if (parts.length >= 2) {
             return cleanGoto.includes(parts[0]) && cleanGoto.includes(parts[1]);
@@ -304,11 +303,7 @@ export default async function handler(req, res) {
           return (order[a.status]??9) - (order[b.status]??9);
         }),
         neppoAgentsFound: neppoAgentNames.length,
-        _debug: {
-          neppoNames: neppoAgentNames,
-          gotoTotal: allAgents.length,
-          gotoAllNames: allAgents.map(a => a.name)
-        }
+
       });
     }
 

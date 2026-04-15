@@ -233,32 +233,34 @@ export default async function handler(req, res) {
         queueCalls: acc.queueCalls + a.queueCalls
       }), { inbound: 0, outbound: 0, total: 0, queueCalls: 0 });
 
-      // Buscar detalhes por usuário para identificar de qual fila veio cada ligação
-      // IDs das filas SAC no GoTo
-      const SAC_PROC_ID  = 'abee458c-f2a0-48a1-a2aa-4ffbc60783ff';
-      const SAC_TEC_ID   = 'aeb9c333-9899-43aa-9226-60ccda96e94e';
+      // queueCalls dos agentes = ligações atendidas das filas SAC
+      // Para total recebido, buscar caller-activity de hoje (inclui abandonadas)
+      const callerResp = await fetch(
+        `https://api.goto.com/call-reports/v1/reports/caller-activity?organizationId=${ORG_ID}&startTime=${startOfDay}&endTime=${now}&pageSize=1`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      const callerData = await callerResp.json().catch(() => ({}));
 
-      // Buscar user-activity por fila usando callQueueIds
-      const [procResp, tecResp] = await Promise.all([
-        fetch(`https://api.goto.com/call-reports/v1/reports/user-activity?organizationId=${ORG_ID}&startTime=${startOfDay}&endTime=${now}&pageSize=200&callQueueId=${SAC_PROC_ID}`,
-          { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`https://api.goto.com/call-reports/v1/reports/user-activity?organizationId=${ORG_ID}&startTime=${startOfDay}&endTime=${now}&pageSize=200&callQueueId=${SAC_TEC_ID}`,
-          { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);
-      const procData = await procResp.json().catch(() => ({ items: [] }));
-      const tecData  = await tecResp.json().catch(() => ({ items: [] }));
+      // Total de ligações atendidas nas filas SAC = queueCalls dos agentes
+      const totalAnswered = totals.queueCalls;
 
-      const sumQueue = items => (items||[]).reduce((s, u) => s + (u.dataValues?.inboundQueueVolume || 0), 0);
-
+      // Por ora mostrar o que temos com dados confiáveis
+      // % de atendimento = atendidas / (atendidas + estimativa de abandonadas)
+      // Vamos usar o queueCalls total como "atendidas" e mostrar no painel
       const queuePerformance = [
-        { queue: 'SAC Processos', answered: sumQueue(procData.items), status: procResp.status },
-        { queue: 'SAC Técnico',   answered: sumQueue(tecData.items),  status: tecResp.status  }
-      ].filter(q => q.answered > 0 || q.status === 200);
+        {
+          queue: 'SAC (todas as filas)',
+          answered: totalAnswered,
+          pct: 100 // será calculado quando tivermos total recebido
+        }
+      ];
 
       return res.status(200).json({
         ...totals,
         agents: sacAgents,
         queuePerformance,
+        callerStatus: callerResp.status,
+        callerSample: callerData.items?.slice(0,2),
         sacNamesFound: sacNames.length
       });
     }

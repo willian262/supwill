@@ -112,22 +112,25 @@ export default async function handler(req, res) {
     }
 
     if (path === 'queues') {
-      // Tenta vários endpoints de filas
-      const attempts = [
-        `/voice-admin/v1/call-queues?accountKey=${ACCOUNT_KEY}`,
-        `/voice-admin/v1/queues?accountKey=${ACCOUNT_KEY}`,
-        `/call-queues/v1/queues?accountKey=${ACCOUNT_KEY}`,
-        `/voice-admin/v2/queues?accountKey=${ACCOUNT_KEY}`,
+      const data = await gotoGet(`/voice-admin/v1/call-queues?accountKey=${ACCOUNT_KEY}`, token);
+      return res.status(200).json(data);
+    }
+
+    if (path === 'queue-members') {
+      // Busca membros das filas SAC
+      const SAC_QUEUE_IDS = [
+        'abee458c-f2a0-48a1-a2aa-4ffbc60783ff',
+        'c605723a-7456-4980-94da-b4e1a39bb5be',
+        '633181e3-490f-4967-82ad-120e5bb92718',
+        'aeb9c333-9899-43aa-9226-60ccda96e94e',
+        'b383c456-66f5-462f-a77b-ab20a075d02a',
+        '7fc41106-4cfb-4ab6-b69b-39d48a3682f0',
+        '9e08baa5-f1ad-4519-a785-e4680e2eb3b0',
       ];
-      const results = {};
-      for (const path of attempts) {
-        try {
-          const d = await gotoGet(path, token);
-          results[path] = d;
-        } catch(e) {
-          results[path] = { error: e.message };
-        }
-      }
+      const results = await Promise.all(
+        SAC_QUEUE_IDS.map(id => gotoGet(`/voice-admin/v1/call-queues/${id}/members`, token)
+          .then(d => ({ id, members: d })).catch(e => ({ id, error: e.message })))
+      );
       return res.status(200).json(results);
     }
 

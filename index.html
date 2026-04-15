@@ -525,7 +525,7 @@
       <div style="padding:16px 18px;display:flex;flex-direction:column;gap:16px">
 
         <!-- 1. KPIs de status dos ramais -->
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px">
           <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--yellow);border-radius:7px;padding:12px 14px;text-align:center">
             <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Total Agentes</div>
             <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--yellow)" id="gTotal">—</div>
@@ -537,6 +537,10 @@
           <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--orange);border-radius:7px;padding:12px 14px;text-align:center">
             <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Em Chamada</div>
             <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--orange)" id="gBusy">—</div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--cyan);border-radius:7px;padding:12px 14px;text-align:center">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Em Pausa</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--cyan)" id="gAway">—</div>
           </div>
           <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--red);border-radius:7px;padding:12px 14px;text-align:center">
             <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Offline</div>
@@ -1184,7 +1188,8 @@
 
       document.getElementById('gTotal').textContent   = data.totalAgents || 0;
       document.getElementById('gOnline').textContent  = data.online  || 0;
-      document.getElementById('gBusy').textContent    = (data.busy || 0) + (data.away || 0);
+      document.getElementById('gBusy').textContent    = data.busy || 0;
+      document.getElementById('gAway').textContent   = data.away    || 0;
       document.getElementById('gOffline').textContent = data.offline || 0;
       document.getElementById('gotoBadge').textContent = `${data.totalAgents} ramais`;
       document.getElementById('gotoUpdate').textContent =

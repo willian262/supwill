@@ -120,30 +120,12 @@ export default async function handler(req, res) {
       const ORG_ID = '6e9bbc00-5714-4f56-81e4-c1f12ebbf905';
 
       // Busca atividade de usuários + atividade por número de fila em paralelo
-      const [userResp, phoneResp] = await Promise.all([
-        fetch(`https://api.goto.com/call-reports/v1/reports/user-activity?organizationId=${ORG_ID}&startTime=${startOfDay}&endTime=${now}&pageSize=200`,
-          { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`https://api.goto.com/call-reports/v1/reports/phone-number-activity?organizationId=${ORG_ID}&startTime=${startOfDay}&endTime=${now}&pageSize=200`,
-          { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);
+      const userResp = await fetch(
+        `https://api.goto.com/call-reports/v1/reports/user-activity?organizationId=${ORG_ID}&startTime=${startOfDay}&endTime=${now}&pageSize=200`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
       const data = await userResp.json();
-      const phoneData = await phoneResp.json();
-      // Debug: ver dados raw de todos os agentes SAC
-      const rawSac = (data.items||[]).filter(u => {
-        const n = (u.userName||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-        return ['mikaele','debora','eduardo','carlos','vinicius','camila','thiago'].some(k => n.includes(k));
-      });
-      return res.status(200).json({ 
-        sacRaw: rawSac.map(u => ({ 
-          name: u.userName, 
-          inbound: u.dataValues.inboundVolume,
-          outbound: u.dataValues.outboundVolume,
-          total: u.dataValues.volume,
-          queueCalls: u.dataValues.inboundQueueVolume,
-          totalDuration: u.dataValues.totalDuration,
-          avgDuration: u.dataValues.averageDuration
-        }))
-      });
+
       const items = data.items || [];
 
       // Busca agentes SAC da Neppo para filtrar
@@ -179,8 +161,12 @@ export default async function handler(req, res) {
         const cleanGoto = norm(gotoName);
         return sacNames.some(n => {
           const parts = n.split(' ').filter(Boolean);
-          if (parts.length >= 2) return cleanGoto.includes(parts[0]) && cleanGoto.includes(parts[1]);
-          return cleanGoto.startsWith(parts[0]);
+          if (parts.length >= 2) {
+            // Exige nome + sobrenome exatos — evita "Vinicius Souza" bater com "Vinicius Fonseca"
+            return cleanGoto.startsWith(parts[0] + ' ' + parts[1]) ||
+                   cleanGoto === parts[0] + ' ' + parts[1];
+          }
+          return false;
         });
       };
 
@@ -194,15 +180,26 @@ export default async function handler(req, res) {
       const sacAgents = items
         .filter(u => isSac(u.userName))
         .filter(u => (u.dataValues.totalDuration || 0) > 0) // só quem efetivamente atendeu
-        .map(u => ({
-          name: u.userName.replace(/\s*-\s*Sac\s*$/i, '').trim(),
-          inbound: u.dataValues.inboundVolume || 0,
-          outbound: u.dataValues.outboundVolume || 0,
-          total: u.dataValues.volume || 0,
-          queueCalls: u.dataValues.inboundQueueVolume || 0,
-          avgDuration: u.dataValues.averageDuration ? fmtDur(u.dataValues.averageDuration) : '—',
-          totalDuration: u.dataValues.totalDuration ? fmtDur(u.dataValues.totalDuration) : '—'
-        }))
+        .map(u => {
+          const totalDur = u.dataValues.totalDuration || 0;
+          const avgDur   = u.dataValues.averageDuration || 0;
+          // Quando totalDuration == avgDuration, foi só 1 ligação independente do inbound
+          // Isso corrige duplicata de transferências no GoTo
+          const realTotal = (totalDur > 0 && avgDur > 0)
+            ? Math.round(totalDur / avgDur)
+            : (u.dataValues.inboundVolume || 0) + (u.dataValues.outboundVolume || 0);
+          const realInbound = Math.min(u.dataValues.inboundVolume || 0, realTotal);
+          const queueCalls  = Math.min(u.dataValues.inboundQueueVolume || 0, realInbound);
+          return {
+            name: u.userName.replace(/\s*-\s*Sac\s*$/i, '').trim(),
+            inbound: realInbound,
+            outbound: u.dataValues.outboundVolume || 0,
+            total: realTotal,
+            queueCalls,
+            avgDuration: avgDur ? fmtDur(avgDur) : '—',
+            totalDuration: totalDur ? fmtDur(totalDur) : '—'
+          };
+        })
         .sort((a, b) => b.total - a.total);
 
       const totals = sacAgents.reduce((acc, a) => ({

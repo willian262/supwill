@@ -247,9 +247,16 @@ export default async function handler(req, res) {
         });
       };
 
-      const [usersData] = await Promise.all([
-        gotoGet(`/users/v1/users?accountKey=${ACCOUNT_KEY}`, token)
-      ]);
+      // Busca todos os usuários com paginação
+      let allUsers = [];
+      let nextMarker = null;
+      do {
+        const url = `/users/v1/users?accountKey=${ACCOUNT_KEY}${nextMarker ? '&pageMarker=' + nextMarker : ''}`;
+        const page = await gotoGet(url, token);
+        allUsers = allUsers.concat(page.items || []);
+        nextMarker = page.nextPageMarker || null;
+      } while (nextMarker && allUsers.length < 500);
+      const usersData = { items: allUsers };
 
       // Buscar presença
       const userKeys = (usersData.items || []).map(u => u.userKey).filter(Boolean).slice(0, 100);
@@ -299,6 +306,7 @@ export default async function handler(req, res) {
         neppoAgentsFound: neppoAgentNames.length,
         _debug: {
           neppoNames: neppoAgentNames,
+          gotoTotal: allAgents.length,
           gotoAllNames: allAgents.map(a => a.name)
         }
       });

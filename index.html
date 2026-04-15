@@ -1239,7 +1239,7 @@
             <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--orange)">${totalOutbound}</div>
           </div>
           <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--cyan);border-radius:7px;padding:10px;text-align:center">
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Duração Média Total</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Duração Média</div>
             <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--cyan);line-height:1.2">${stats.avgDuration || '—'}</div>
           </div>
         </div>
@@ -1261,10 +1261,6 @@
             <span><b style="color:var(--text)">Saídas</b> — ligações feitas pelo agente para clientes</span>
           </div>
         </div>`;
-          <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);background:rgba(255,208,76,0.06);border:1px solid rgba(255,208,76,0.15);border-radius:5px;padding:6px 10px;width:100%;margin-top:4px">
-            <span style="color:var(--yellow)">⚠</span>
-            <span>Limitação da API GoTo: transferências recebidas contam em <b style="color:var(--text)">Da Fila SAC</b>. A <b style="color:var(--text)">Duração Média Total</b> inclui transferências.</span>
-          </div>
       // Lista de agentes
       const agentsHtml = callAgents.length === 0
         ? '<div style="padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;text-align:center;color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase">Sem ligações registradas hoje</div>'

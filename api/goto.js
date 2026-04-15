@@ -172,14 +172,44 @@ export default async function handler(req, res) {
     }
 
     if (path === 'dashboard') {
-      // Busca agentes SAC da Neppo para cruzar com GoTo
+      // Busca agentes SAC diretamente da Neppo
       let neppoAgentNames = [];
       try {
-        const neppoRes = await fetch(`${process.env.VERCEL_URL ? 'https://'+process.env.VERCEL_URL : 'https://project-fj1lt.vercel.app'}/api/neppo?path=dashboard`);
-        const neppoData = await neppoRes.json();
-        neppoAgentNames = (neppoData.agents || [])
-          .filter(a => a.name !== 'Bot SAC')
-          .map(a => a.name.toLowerCase().trim());
+        // Auth Neppo
+        const basicAuth = Buffer.from(
+          `${process.env.NEPPO_CONSUMER_KEY}:${process.env.NEPPO_CONSUMER_SECRET}`
+        ).toString('base64');
+        const tokenRes = await fetch('https://api-auth.neppo.com.br/oauth2/token', {
+          method: 'POST',
+          headers: { 'Authorization': `Basic ${basicAuth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ grant_type: 'password', username: process.env.NEPPO_USER, password: process.env.NEPPO_PASS })
+        });
+        const tokenData = await tokenRes.json();
+        const neppoToken = tokenData.access_token || process.env.NEPPO_ACCESS_TOKEN;
+
+        // Buscar sessões SAC ativas
+        const sessRes = await fetch('https://api.neppo.com.br/chatapi/1.0/api/user-session', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${neppoToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            conditions: [
+              { key: 'groupConf.operation.operationName', value: 'Sac', operator: 'EQ', logic: 'AND' },
+              { key: 'status', value: 'CLOSED', operator: 'NEQ', logic: 'AND' }
+            ],
+            sort: true, sortColumn: 'id', direction: 'DESC', page: 0, size: 200
+          })
+        });
+        const sessData = await sessRes.json();
+        const BOT_KW = ['bot', 'pesquisa', '@botserver', 'csat', 'nps', 'inatividade', 'inicial'];
+        const isBot = n => !n || BOT_KW.some(k => n.toLowerCase().includes(k));
+        const seen = new Set();
+        (sessData.results || []).forEach(s => {
+          const name = s.agent?.displayName;
+          if (name && !isBot(name) && !seen.has(name)) {
+            seen.add(name);
+            neppoAgentNames.push(name.toLowerCase().trim());
+          }
+        });
       } catch(e) {}
 
       // Função para checar se nome GoTo bate com algum agente Neppo

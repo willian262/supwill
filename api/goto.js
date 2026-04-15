@@ -213,16 +213,21 @@ export default async function handler(req, res) {
       } catch(e) {}
 
       // Função para checar se nome GoTo bate com algum agente Neppo
+      // GoTo usa "Nome Sobrenome - Departamento", Neppo usa "Nome Sobrenome"
       const isSacAgent = (gotoName) => {
-        if (!gotoName || !neppoAgentNames.length) return true; // se Neppo falhou, mostra todos
-        const lower = gotoName.toLowerCase();
-        return neppoAgentNames.some(n => {
-          const parts = n.split(' ').filter(Boolean);
-          // Basta o primeiro nome + primeiro sobrenome baterem
+        if (!gotoName || !neppoAgentNames.length) return true;
+        // Remove sufixo " - Departamento" do nome GoTo
+        const cleanGoto = gotoName.toLowerCase().replace(/\s*-\s*\w.*$/, '').trim();
+        return neppoAgentNames.some(neppoName => {
+          const cleanNeppo = neppoName.replace(/\s*-\s*\w.*$/, '').trim();
+          // Compara nome limpo diretamente
+          if (cleanGoto === cleanNeppo) return true;
+          // Ou verifica se primeiro nome + sobrenome batem
+          const parts = cleanNeppo.split(' ').filter(Boolean);
           if (parts.length >= 2) {
-            return lower.includes(parts[0]) && lower.includes(parts[1]);
+            return cleanGoto.includes(parts[0]) && cleanGoto.includes(parts[1]);
           }
-          return lower.includes(parts[0]);
+          return cleanGoto.startsWith(parts[0]);
         });
       };
 

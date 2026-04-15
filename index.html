@@ -646,6 +646,20 @@
   async function loadData() {
   show('viewLoading');
     document.getElementById('btnRefresh').classList.add('spinning');
+
+    // Se estiver numa aba específica, atualiza só ela
+    const activeTab = document.querySelector('.tab-btn.active')?.id;
+    if (activeTab === 'tabNeppo') {
+      await loadNeppo().catch(() => {});
+      document.getElementById('btnRefresh').classList.remove('spinning');
+      return;
+    }
+    if (activeTab === 'tabGoto') {
+      await loadGoto().catch(() => {});
+      document.getElementById('btnRefresh').classList.remove('spinning');
+      return;
+    }
+
     try {
       // Sequencial para não sobrecarregar o endpoint de token da Zoho
       const allData    = await zoho('tickets', {});
@@ -1110,6 +1124,21 @@
 
   // ── Neppo WhatsApp ──
   async function loadNeppo() {
+    // Mostrar estado de carregando
+    document.getElementById('neppoUpdate').textContent = 'carregando...';
+    document.getElementById('neppoBadge').textContent  = '—';
+    document.getElementById('nTotal').textContent      = '—';
+    document.getElementById('nAbertasHoje').textContent= '—';
+    document.getElementById('nWaiting').textContent    = '—';
+    document.getElementById('nOnline').textContent     = '—';
+    document.getElementById('nPaused').textContent     = '—';
+    document.getElementById('nBot').textContent        = '—';
+    document.getElementById('nTme').textContent        = '—';
+    document.getElementById('neppoAgents').innerHTML   =
+      '<div style="grid-column:1/-1;padding:20px;text-align:center"><div class="loader-ring" style="margin:0 auto"></div><div style="font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--subtle);margin-top:10px">Buscando conversas...</div></div>';
+    document.getElementById('neppoGroupQueue').innerHTML = '';
+    document.getElementById('neppoWaiting').innerHTML  = '';
+
     try {
       const data = await fetch('/api/neppo?path=dashboard').then(r=>r.json());
 

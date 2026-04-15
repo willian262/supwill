@@ -116,6 +116,29 @@ export default async function handler(req, res) {
       return res.status(200).json(data);
     }
 
+    if (path === 'queue-status') {
+      // Tenta vários endpoints de status de fila em tempo real
+      const SAC_IDS = [
+        'abee458c-f2a0-48a1-a2aa-4ffbc60783ff', // SAC PROCESSOS
+        'aeb9c333-9899-43aa-9226-60ccda96e94e', // SAC TÉCNICO
+      ];
+      const attempts = {};
+      const paths = [
+        `/voice-admin/v1/call-queues/${SAC_IDS[0]}/status`,
+        `/voice-admin/v1/call-queues/${SAC_IDS[0]}/stats`,
+        `/call-reports/v1/queues/${SAC_IDS[0]}`,
+        `/cr/v1/queues?accountKey=${ACCOUNT_KEY}`,
+        `/cr/v1/accounts/${ACCOUNT_KEY}/queues`,
+        `/voice-admin/v1/call-queues/${SAC_IDS[0]}/real-time`,
+        `/reporting/v1/queues?accountKey=${ACCOUNT_KEY}&startTime=${startOfDay}&endTime=${now}`,
+      ];
+      for (const p of paths) {
+        const d = await gotoGet(p, token).catch(e => ({ error: e.message }));
+        attempts[p] = d?.errorCode ? d.errorCode : (d?.items ? `${d.items.length} items` : JSON.stringify(d).slice(0,100));
+      }
+      return res.status(200).json(attempts);
+    }
+
     if (path === 'queue-members') {
       // Busca detalhes completos de uma fila SAC para ver estrutura
       const queueId = 'abee458c-f2a0-48a1-a2aa-4ffbc60783ff'; // SAC PROCESSOS

@@ -328,6 +328,26 @@
 
 
 
+  <!-- GRÁFICO FECHAMENTOS POR TIME -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Fechamentos por Time — Últimos 30 Dias</span>
+      <div style="display:flex;align-items:center;gap:20px">
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
+          <div style="width:10px;height:10px;border-radius:2px;background:var(--yellow)"></div>Processos
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
+          <div style="width:10px;height:10px;border-radius:2px;background:var(--cyan)"></div>Técnico
+        </div>
+        <div style="display:flex;gap:10px" id="teamAvgBadges"></div>
+      </div>
+    </div>
+    <div style="padding:16px 18px">
+      <canvas id="teamChart" height="60"></canvas>
+      <div id="teamChartEmpty" class="no-data" style="display:none">Carregando dados...</div>
+    </div>
+  </div>
+
   <!-- TIMES -->
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
 
@@ -1054,6 +1074,71 @@
           </div>`;
         window._podiumRendered = true;
       }
+
+      // ── Gráfico por time ──
+      const TEAM_PROC = ['Logística','Comercial','Financeiro'];
+      const TEAM_TEC  = ['Defeito em produto','Suporte Técnico'];
+
+      const procFech = {};
+      const tecFech  = {};
+      days.forEach(d => { procFech[d] = 0; tecFech[d] = 0; });
+
+      closed.forEach(t => {
+        const ref = t.closedTime || t.modifiedTime;
+        if (!ref) return;
+        const dBR = new Date(new Date(ref).getTime() - 3*3600000).toISOString().slice(0,10);
+        if (procFech[dBR] === undefined) return;
+        const cls = (t.classification||'').toLowerCase();
+        if (TEAM_PROC.some(p => cls.includes(p.toLowerCase()))) procFech[dBR]++;
+        else if (TEAM_TEC.some(p => cls.includes(p.toLowerCase()))) tecFech[dBR]++;
+      });
+
+      const procData30 = days.map(d => procFech[d]);
+      const tecData30  = days.map(d => tecFech[d]);
+
+      // Médias diárias (só dias com pelo menos 1 fechamento)
+      const avg = arr => {
+        const nonZero = arr.filter(v => v > 0);
+        return nonZero.length ? (nonZero.reduce((a,b)=>a+b,0)/nonZero.length).toFixed(1) : '0';
+      };
+      const avgProc = avg(procData30);
+      const avgTec  = avg(tecData30);
+
+      document.getElementById('teamAvgBadges').innerHTML = `
+        <div style="background:rgba(255,208,76,0.1);border:1px solid rgba(255,208,76,0.2);border-radius:4px;padding:2px 8px;font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--yellow)">
+          Proc: ~${avgProc}/dia
+        </div>
+        <div style="background:rgba(34,211,238,0.1);border:1px solid rgba(34,211,238,0.2);border-radius:4px;padding:2px 8px;font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--cyan)">
+          Téc: ~${avgTec}/dia
+        </div>`;
+
+      if (window._teamChart) window._teamChart.destroy();
+      const ctx2 = document.getElementById('teamChart').getContext('2d');
+      window._teamChart = new Chart(ctx2, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Processos', data: procData30, backgroundColor: 'rgba(255,208,76,0.7)', borderColor: '#FFD04C', borderWidth: 1, borderRadius: 3 },
+            { label: 'Técnico',   data: tecData30,  backgroundColor: 'rgba(34,211,238,0.7)', borderColor: '#22d3ee', borderWidth: 1, borderRadius: 3 }
+          ]
+        },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#202020', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
+              titleColor: '#f0ede8', bodyColor: '#888580'
+            }
+          },
+          scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#888580', font: { size: 10 } } },
+            y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#888580', font: { size: 10 }, stepSize: 1 }, beginAtZero: true }
+          }
+        }
+      });
 
       // Destroi chart anterior se existir
       if (window._fluxoChart) window._fluxoChart.destroy();

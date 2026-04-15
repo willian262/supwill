@@ -88,6 +88,14 @@ export default async function handler(req, res) {
           conditions: SAC_CONDITIONS,
           sort: true, sortColumn: 'id', direction: 'DESC', page, size: 100
         }, token);
+        // Debug: verificar se retornou erro de autenticação
+        if (data.message || data.error || data.fault) {
+          return res.status(200).json({
+            _authError: data.message || data.error || data.fault,
+            _page: page,
+            _tokenType: _neppoToken === process.env.NEPPO_ACCESS_TOKEN ? 'fixed' : 'oauth'
+          });
+        }
         const batch = data.results || [];
         sac = sac.concat(batch);
         if (batch.length < 100) break;
@@ -183,6 +191,8 @@ export default async function handler(req, res) {
 
       return res.status(200).json({
         totalConversations: sac.length,
+        _pages: page,
+        _tokenType: _neppoToken === process.env.NEPPO_ACCESS_TOKEN ? 'fixed' : 'oauth',
         totalAgents: agents.length,
         online, paused, offline,
         waiting, inQueue,

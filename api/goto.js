@@ -112,38 +112,43 @@ export default async function handler(req, res) {
     }
 
     if (path === 'queues') {
-      // Filas de chamadas
-      const data = await gotoGet(`/call-reports/v1/queues?accountKey=${ACCOUNT_KEY}`, token);
+      const data = await gotoGet(`/voice-admin/v1/accounts/${ACCOUNT_KEY}/queues`, token);
       return res.status(200).json(data);
     }
 
     if (path === 'calls-today') {
-      // Relatório de chamadas de hoje
       const data = await gotoGet(
-        `/call-reports/v1/call-summaries?accountKey=${ACCOUNT_KEY}&startTime=${startOfDay}&endTime=${now}`,
+        `/call-events/v1/accounts/${ACCOUNT_KEY}/calls?startTime=${startOfDay}&endTime=${now}`,
         token
       );
       return res.status(200).json(data);
     }
 
     if (path === 'realtime') {
-      // Status em tempo real das filas
-      const data = await gotoGet(`/cc-analytics/v1/queue-status?accountKey=${ACCOUNT_KEY}`, token);
+      const data = await gotoGet(`/presence/v1/accounts/${ACCOUNT_KEY}/presence`, token);
       return res.status(200).json(data);
     }
 
     if (path === 'agents-status') {
-      // Status dos agentes
-      const data = await gotoGet(`/cc-analytics/v1/agent-status?accountKey=${ACCOUNT_KEY}`, token);
+      const data = await gotoGet(`/presence/v1/accounts/${ACCOUNT_KEY}/users`, token);
       return res.status(200).json(data);
     }
 
     if (path === 'call-history') {
-      // Histórico de chamadas
       const data = await gotoGet(
-        `/call-history/v1/call-history?accountKey=${ACCOUNT_KEY}&startTime=${startOfDay}&endTime=${now}`,
+        `/call-history/v1/accounts/${ACCOUNT_KEY}/calls?startTime=${startOfDay}&endTime=${now}`,
         token
       );
+      return res.status(200).json(data);
+    }
+
+    if (path === 'lines') {
+      const data = await gotoGet(`/voice-admin/v1/accounts/${ACCOUNT_KEY}/lines`, token);
+      return res.status(200).json(data);
+    }
+
+    if (path === 'users') {
+      const data = await gotoGet(`/users/v1/accounts/${ACCOUNT_KEY}/users`, token);
       return res.status(200).json(data);
     }
 

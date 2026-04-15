@@ -119,12 +119,31 @@ export default async function handler(req, res) {
     if (path === 'queue-stats') {
       const ORG_ID = '6e9bbc00-5714-4f56-81e4-c1f12ebbf905';
 
-      // Busca atividade de usuários hoje
-      const r = await fetch(
-        `https://api.goto.com/call-reports/v1/reports/user-activity?organizationId=${ORG_ID}&startTime=${startOfDay}&endTime=${now}&pageSize=200`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
-      const data = await r.json();
+      // Busca atividade de usuários + atividade por número de fila em paralelo
+      const [userResp, phoneResp] = await Promise.all([
+        fetch(`https://api.goto.com/call-reports/v1/reports/user-activity?organizationId=${ORG_ID}&startTime=${startOfDay}&endTime=${now}&pageSize=200`,
+          { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`https://api.goto.com/call-reports/v1/reports/phone-number-activity?organizationId=${ORG_ID}&startTime=${startOfDay}&endTime=${now}&pageSize=200`,
+          { headers: { 'Authorization': `Bearer ${token}` } })
+      ]);
+      const data = await userResp.json();
+      const phoneData = await phoneResp.json();
+      // Debug: ver dados raw de todos os agentes SAC
+      const rawSac = (data.items||[]).filter(u => {
+        const n = (u.userName||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        return ['mikaele','debora','eduardo','carlos','vinicius','camila','thiago'].some(k => n.includes(k));
+      });
+      return res.status(200).json({ 
+        sacRaw: rawSac.map(u => ({ 
+          name: u.userName, 
+          inbound: u.dataValues.inboundVolume,
+          outbound: u.dataValues.outboundVolume,
+          total: u.dataValues.volume,
+          queueCalls: u.dataValues.inboundQueueVolume,
+          totalDuration: u.dataValues.totalDuration,
+          avgDuration: u.dataValues.averageDuration
+        }))
+      });
       const items = data.items || [];
 
       // Busca agentes SAC da Neppo para filtrar

@@ -197,28 +197,37 @@ export default async function handler(req, res) {
         };
       });
 
-      // Presença por userKey
+      // Presença por userKey — campo é "appearance"
       const presenceMap = {};
       (presenceData.items || []).forEach(p => {
-        presenceMap[p.userKey] = p.status || p.presence || 'UNKNOWN';
+        presenceMap[p.userKey] = p.appearance || 'OFFLINE';
       });
 
       // Combinar
       const agents = Object.entries(userMap).map(([key, info]) => ({
         name: info.name,
         number: info.number,
-        status: presenceMap[key] || 'UNKNOWN'
-      })).filter(a => a.name && !a.name.toLowerCase().includes('test'));
+        status: presenceMap[key] || 'OFFLINE'
+      })).filter(a => a.name);
 
       const online  = agents.filter(a => a.status === 'AVAILABLE').length;
-      const busy    = agents.filter(a => ['BUSY','ON_CALL','IN_CALL'].includes(a.status)).length;
-      const away    = agents.filter(a => ['AWAY','DO_NOT_DISTURB'].includes(a.status)).length;
-      const offline = agents.filter(a => a.status === 'OFFLINE' || a.status === 'UNKNOWN').length;
+      const busy    = agents.filter(a => ['BUSY','ON_A_CALL'].includes(a.status)).length;
+      const away    = agents.filter(a => ['AWAY','DO_NOT_DISTURB','IDLE'].includes(a.status)).length;
+      const offline = agents.filter(a => a.status === 'OFFLINE').length;
+
+      // Debug: mostrar amostra do mapeamento
+      const sampleKeys = Object.keys(userMap).slice(0,3);
+      const samplePresence = Object.keys(presenceMap).slice(0,3);
 
       return res.status(200).json({
         totalAgents: agents.length,
         online, busy, away, offline,
-        agents: agents.sort((a,b) => a.name.localeCompare(b.name))
+        agents: agents.sort((a,b) => a.name.localeCompare(b.name)),
+        _debug: {
+          userMapKeys: sampleKeys,
+          presenceKeys: samplePresence,
+          presenceTotal: Object.keys(presenceMap).length
+        }
       });
     }
 

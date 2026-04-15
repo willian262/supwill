@@ -524,7 +524,7 @@
       </div>
       <div style="padding:16px 18px;display:flex;flex-direction:column;gap:16px">
 
-        <!-- KPIs -->
+        <!-- 1. KPIs de status dos ramais -->
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
           <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--yellow);border-radius:7px;padding:12px 14px;text-align:center">
             <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Total Agentes</div>
@@ -544,29 +544,24 @@
           </div>
         </div>
 
-        <!-- Pódio de ligações do dia -->
+        <!-- 2. Ramais por agente (status em tempo real) -->
+        <div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--yellow);margin-bottom:10px">Ramais por Agente</div>
+          <div id="gotoAgents" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px"></div>
+        </div>
+
+        <!-- 3. Pódio ligações do dia -->
         <div id="gotoPodioCont" style="display:none">
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--yellow);margin-bottom:10px">🏆 Top 3 — Ligações Atendidas Hoje</div>
           <div id="gotoPodio" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"></div>
         </div>
 
-        <!-- Linha: Chamadas do dia + Agentes -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-
-          <!-- Chamadas do dia por agente -->
-          <div>
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--yellow);margin-bottom:10px">📊 Chamadas Hoje por Agente</div>
-            <div id="gotoCallStats" style="display:flex;flex-direction:column;gap:6px">
-              <div style="font-size:11px;color:var(--muted)">Carregando...</div>
-            </div>
+        <!-- 4. Chamadas do dia por agente -->
+        <div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--yellow);margin-bottom:10px">📊 Chamadas Hoje por Agente</div>
+          <div id="gotoCallStats" style="display:flex;flex-direction:column;gap:6px">
+            <div style="font-size:11px;color:var(--muted)">Carregando...</div>
           </div>
-
-          <!-- Status dos ramais -->
-          <div>
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--yellow);margin-bottom:10px">Ramais por Agente</div>
-            <div id="gotoAgents" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px"></div>
-          </div>
-
         </div>
 
       </div>

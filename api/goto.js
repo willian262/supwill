@@ -174,6 +174,7 @@ export default async function handler(req, res) {
 
       const sacAgents = items
         .filter(u => isSac(u.userName))
+        .filter(u => (u.dataValues.totalDuration || 0) > 0) // só quem efetivamente atendeu
         .map(u => ({
           name: u.userName.replace(/\s*-\s*Sac\s*$/i, '').trim(),
           inbound: u.dataValues.inboundVolume || 0,

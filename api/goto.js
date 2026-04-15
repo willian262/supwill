@@ -162,9 +162,64 @@ export default async function handler(req, res) {
     }
 
     if (path === 'presence') {
-      // Presença dos usuários
-      const data = await gotoGet(`/presence/v1/presence?accountKey=${ACCOUNT_KEY}`, token);
+      // Busca userKeys e depois a presença de cada um
+      const usersData = await gotoGet(`/users/v1/users?accountKey=${ACCOUNT_KEY}`, token);
+      const userKeys = (usersData.items || []).map(u => u.userKey).filter(Boolean).slice(0, 100);
+      if (!userKeys.length) return res.status(200).json({ items: [] });
+      const qs = userKeys.map(k => `userKey=${k}`).join('&');
+      const data = await gotoGet(`/presence/v1/presence?${qs}`, token);
       return res.status(200).json(data);
+    }
+
+    if (path === 'dashboard') {
+      // Dashboard completo de telefonia
+      const [usersData, extensionsData] = await Promise.all([
+        gotoGet(`/users/v1/users?accountKey=${ACCOUNT_KEY}`, token),
+        gotoGet(`/voice-admin/v1/extensions?accountKey=${ACCOUNT_KEY}`, token)
+      ]);
+
+      // Buscar presença
+      const userKeys = (usersData.items || []).map(u => u.userKey).filter(Boolean).slice(0, 100);
+      let presenceData = { items: [] };
+      if (userKeys.length) {
+        const qs = userKeys.map(k => `userKey=${k}`).join('&');
+        presenceData = await gotoGet(`/presence/v1/presence?${qs}`, token);
+      }
+
+      // Mapa userKey -> linha/nome
+      const userMap = {};
+      (usersData.items || []).forEach(u => {
+        const line = (u.lines || []).find(l => l.primary) || u.lines?.[0];
+        userMap[u.userKey] = {
+          name: line?.name || u.userId,
+          number: line?.number || '',
+          lineId: line?.id || ''
+        };
+      });
+
+      // Presença por userKey
+      const presenceMap = {};
+      (presenceData.items || []).forEach(p => {
+        presenceMap[p.userKey] = p.status || p.presence || 'UNKNOWN';
+      });
+
+      // Combinar
+      const agents = Object.entries(userMap).map(([key, info]) => ({
+        name: info.name,
+        number: info.number,
+        status: presenceMap[key] || 'UNKNOWN'
+      })).filter(a => a.name && !a.name.toLowerCase().includes('test'));
+
+      const online  = agents.filter(a => a.status === 'AVAILABLE').length;
+      const busy    = agents.filter(a => ['BUSY','ON_CALL','IN_CALL'].includes(a.status)).length;
+      const away    = agents.filter(a => ['AWAY','DO_NOT_DISTURB'].includes(a.status)).length;
+      const offline = agents.filter(a => a.status === 'OFFLINE' || a.status === 'UNKNOWN').length;
+
+      return res.status(200).json({
+        totalAgents: agents.length,
+        online, busy, away, offline,
+        agents: agents.sort((a,b) => a.name.localeCompare(b.name))
+      });
     }
 
     // Genérico

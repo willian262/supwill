@@ -112,9 +112,23 @@ export default async function handler(req, res) {
     }
 
     if (path === 'queues') {
-      // Filas de atendimento
-      const data = await gotoGet(`/voice-admin/v1/queues?accountKey=${ACCOUNT_KEY}`, token);
-      return res.status(200).json(data);
+      // Tenta vários endpoints de filas
+      const attempts = [
+        `/voice-admin/v1/call-queues?accountKey=${ACCOUNT_KEY}`,
+        `/voice-admin/v1/queues?accountKey=${ACCOUNT_KEY}`,
+        `/call-queues/v1/queues?accountKey=${ACCOUNT_KEY}`,
+        `/voice-admin/v2/queues?accountKey=${ACCOUNT_KEY}`,
+      ];
+      const results = {};
+      for (const path of attempts) {
+        try {
+          const d = await gotoGet(path, token);
+          results[path] = d;
+        } catch(e) {
+          results[path] = { error: e.message };
+        }
+      }
+      return res.status(200).json(results);
     }
 
     if (path === 'extensions') {

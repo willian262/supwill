@@ -119,14 +119,38 @@ export default async function handler(req, res) {
     if (path === 'queue-stats') {
       const ORG_ID = '6e9bbc00-5714-4f56-81e4-c1f12ebbf905';
 
-      // Busca atividade de usuários + atividade por número de fila em paralelo
-      const userResp = await fetch(
-        `https://api.goto.com/call-reports/v1/reports/user-activity?organizationId=${ORG_ID}&startTime=${startOfDay}&endTime=${now}&pageSize=200`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
+      // Busca atividade de usuários + números de fila em paralelo
+      const [userResp, phoneResp] = await Promise.all([
+        fetch(`https://api.goto.com/call-reports/v1/reports/user-activity?organizationId=${ORG_ID}&startTime=${startOfDay}&endTime=${now}&pageSize=200`,
+          { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`https://api.goto.com/call-reports/v1/reports/phone-number-activity?organizationId=${ORG_ID}&startTime=${startOfDay}&endTime=${now}&pageSize=200`,
+          { headers: { 'Authorization': `Bearer ${token}` } })
+      ]);
       const data = await userResp.json();
+      const phoneData = await phoneResp.json().catch(() => ({ items: [] }));
 
       const items = data.items || [];
+
+      // Filas SAC por número de ramal
+      const SAC_QUEUES_MAP = {
+        '1013': 'SAC Processos',
+        '1012': 'SAC Processos GD',
+        '1015': 'SAC Processos VE',
+        '1019': 'SAC Técnico',
+        '1022': 'SAC Técnico Bombeamento',
+        '1017': 'SAC Técnico GD',
+        '1023': 'SAC Técnico VE',
+      };
+
+      // Filtrar phone-number-activity para filas SAC
+      const queueActivity = (phoneData.items || [])
+        .filter(p => SAC_QUEUES_MAP[p.phoneNumber])
+        .map(p => ({
+          queue: SAC_QUEUES_MAP[p.phoneNumber],
+          number: p.phoneNumber,
+          inbound: p.dataValues?.inboundCallVolume || 0,
+          duration: p.dataValues?.inboundDuration || 0,
+        }));
 
       // Busca agentes SAC da Neppo para filtrar
       let sacNames = [];
@@ -209,10 +233,22 @@ export default async function handler(req, res) {
         queueCalls: acc.queueCalls + a.queueCalls
       }), { inbound: 0, outbound: 0, total: 0, queueCalls: 0 });
 
+      // % atendimento por fila
+      // Ligações atendidas por fila = soma de queueCalls dos agentes (já corrigido)
+      // Ligações recebidas = phone-number-activity da fila
+      const queuePerformance = Object.entries(SAC_QUEUES_MAP).map(([num, name]) => {
+        const activity = queueActivity.find(q => q.number === num);
+        const received = activity?.inbound || 0;
+        const answered = sacAgents.reduce((sum, a) => sum + a.queueCalls, 0);
+        return { queue: name, number: num, received, answered };
+      }).filter(q => q.received > 0);
+
       return res.status(200).json({
         ...totals,
         agents: sacAgents,
-        sacNamesFound: sacNames.length
+        queuePerformance,
+        sacNamesFound: sacNames.length,
+        _phoneDebug: (phoneData.items||[]).slice(0,5).map(p => ({ name: p.phoneNumberName, number: p.phoneNumber, inbound: p.dataValues?.inboundCallVolume }))
       });
     }
 

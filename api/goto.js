@@ -101,10 +101,53 @@ export default async function handler(req, res) {
   }
 
   try {
+    const ACCOUNT_KEY = '1691833281545172737';
+    const today = new Date(Date.now() - 3*3600000).toISOString().slice(0,10);
+    const startOfDay = `${today}T00:00:00Z`;
+    const now = new Date().toISOString();
+
     if (path === 'me') {
       const data = await gotoGet('/users/v1/me', token);
       return res.status(200).json(data);
     }
+
+    if (path === 'queues') {
+      // Filas de chamadas
+      const data = await gotoGet(`/call-reports/v1/queues?accountKey=${ACCOUNT_KEY}`, token);
+      return res.status(200).json(data);
+    }
+
+    if (path === 'calls-today') {
+      // Relatório de chamadas de hoje
+      const data = await gotoGet(
+        `/call-reports/v1/call-summaries?accountKey=${ACCOUNT_KEY}&startTime=${startOfDay}&endTime=${now}`,
+        token
+      );
+      return res.status(200).json(data);
+    }
+
+    if (path === 'realtime') {
+      // Status em tempo real das filas
+      const data = await gotoGet(`/cc-analytics/v1/queue-status?accountKey=${ACCOUNT_KEY}`, token);
+      return res.status(200).json(data);
+    }
+
+    if (path === 'agents-status') {
+      // Status dos agentes
+      const data = await gotoGet(`/cc-analytics/v1/agent-status?accountKey=${ACCOUNT_KEY}`, token);
+      return res.status(200).json(data);
+    }
+
+    if (path === 'call-history') {
+      // Histórico de chamadas
+      const data = await gotoGet(
+        `/call-history/v1/call-history?accountKey=${ACCOUNT_KEY}&startTime=${startOfDay}&endTime=${now}`,
+        token
+      );
+      return res.status(200).json(data);
+    }
+
+    // Genérico
     const data = await gotoGet(`/${path}`, token);
     return res.status(200).json(data);
   } catch(err) {

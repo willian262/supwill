@@ -544,10 +544,23 @@
           </div>
         </div>
 
-        <!-- Agentes -->
-        <div>
-          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--yellow);margin-bottom:10px">Ramais por Agente</div>
-          <div id="gotoAgents" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px"></div>
+        <!-- Linha: Chamadas do dia + Agentes -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+
+          <!-- Chamadas do dia por agente -->
+          <div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--yellow);margin-bottom:10px">📊 Chamadas Hoje por Agente</div>
+            <div id="gotoCallStats" style="display:flex;flex-direction:column;gap:6px">
+              <div style="font-size:11px;color:var(--muted)">Carregando...</div>
+            </div>
+          </div>
+
+          <!-- Status dos ramais -->
+          <div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--yellow);margin-bottom:10px">Ramais por Agente</div>
+            <div id="gotoAgents" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px"></div>
+          </div>
+
         </div>
 
       </div>
@@ -1153,7 +1166,10 @@
   // ── GoTo Telefonia ──
   async function loadGoto() {
     try {
-      const data = await fetch('/api/goto?path=dashboard').then(r => r.json());
+      const [data, stats] = await Promise.all([
+        fetch('/api/goto?path=dashboard').then(r => r.json()),
+        fetch('/api/goto?path=queue-stats').then(r => r.json())
+      ]);
       const agents = data.agents || [];
 
       document.getElementById('gTotal').textContent   = data.totalAgents || 0;
@@ -1179,6 +1195,49 @@
         if (s === 'OFFLINE')    return '○ Offline';
         return '○ ' + (s || 'Offline');
       };
+
+      // Card de chamadas do dia
+      const callAgents = stats.agents || [];
+      const totalInbound  = stats.inbound   || 0;
+      const totalOutbound = stats.outbound  || 0;
+      const totalQueue    = stats.queueCalls|| 0;
+      const totalCalls    = stats.total     || 0;
+
+      if (callAgents.length === 0) {
+        document.getElementById('gotoCallStats').innerHTML =
+          `<div style="padding:14px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;text-align:center">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted);letter-spacing:1px">Sem chamadas registradas hoje</div>
+            <div style="display:flex;gap:16px;justify-content:center;margin-top:10px">
+              <div style="text-align:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--yellow)">${totalCalls}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Total</div></div>
+              <div style="text-align:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--green)">${totalInbound}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Recebidas</div></div>
+              <div style="text-align:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--cyan)">${totalQueue}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Da Fila</div></div>
+            </div>
+          </div>`;
+      } else {
+        const maxCalls = Math.max(...callAgents.map(a => a.total), 1);
+        document.getElementById('gotoCallStats').innerHTML =
+          `<div style="display:flex;gap:16px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;margin-bottom:6px">
+            <div style="text-align:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--yellow)">${totalCalls}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Total</div></div>
+            <div style="text-align:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--green)">${totalInbound}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Recebidas</div></div>
+            <div style="text-align:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--cyan)">${totalQueue}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Da Fila</div></div>
+            <div style="text-align:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--orange)">${totalOutbound}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Saídas</div></div>
+          </div>` +
+          callAgents.map(a => `
+          <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;gap:10px">
+            <div style="min-width:0;flex:1">
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--text)">${a.name.split(' ')[0]}</div>
+              <div style="height:3px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden">
+                <div style="height:100%;background:var(--yellow);width:${Math.round(a.total/maxCalls*100)}%;border-radius:2px"></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:12px;flex-shrink:0">
+              <div style="text-align:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;color:var(--yellow)">${a.total}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">total</div></div>
+              <div style="text-align:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;color:var(--green)">${a.inbound}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">receb.</div></div>
+              <div style="text-align:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;color:var(--cyan)">${a.queueCalls}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">fila</div></div>
+              <div style="text-align:center"><div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--muted)">${a.avgDuration}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">duração</div></div>
+            </div>
+          </div>`).join('');
+      }
 
       document.getElementById('gotoAgents').innerHTML = agents.map(a => {
         const firstName = a.name.replace(/\s*-\s*Sac\s*$/i, '').split(' ')[0];

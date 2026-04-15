@@ -197,7 +197,8 @@ export default async function handler(req, res) {
             total: realTotal,
             queueCalls,
             avgDuration: avgDur ? fmtDur(avgDur) : '—',
-            totalDuration: totalDur ? fmtDur(totalDur) : '—'
+            totalDuration: totalDur ? fmtDur(totalDur) : '—',
+            _totalDurMs: totalDur
           };
         })
         .sort((a, b) => b.total - a.total);
@@ -206,13 +207,19 @@ export default async function handler(req, res) {
         inbound: acc.inbound + a.inbound,
         outbound: acc.outbound + a.outbound,
         total: acc.total + a.total,
-        queueCalls: acc.queueCalls + a.queueCalls
-      }), { inbound: 0, outbound: 0, total: 0, queueCalls: 0 });
+        queueCalls: acc.queueCalls + a.queueCalls,
+        totalDurMs: acc.totalDurMs + (a._totalDurMs || 0)
+      }), { inbound: 0, outbound: 0, total: 0, queueCalls: 0, totalDurMs: 0 });
+
+      const avgDurTotal = (totals.total > 0 && totals.totalDurMs > 0)
+        ? fmtDur(Math.round(totals.totalDurMs / totals.total))
+        : null;
 
 
       return res.status(200).json({
         ...totals,
         agents: sacAgents,
+        avgDuration: avgDurTotal,
         sacNamesFound: sacNames.length
       });
     }

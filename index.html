@@ -1217,31 +1217,47 @@
       const totalCalls    = stats.total     || 0;
 
       const totalTransfer = totalInbound - totalQueue;
+      const totalEntradas = totalInbound; // fila + transferências
       const maxCalls = Math.max(...callAgents.map(a => a.total), 1);
 
-      // Totais consolidados — sempre visíveis
+      // Totais — separados em ENTRADAS e SAÍDAS
       const totaisHtml = `
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:8px">
-          <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--yellow);border-radius:7px;padding:10px;text-align:center">
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Total</div>
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--yellow)">${totalCalls}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
+
+          <!-- Entradas -->
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Ligacoes Recebidas</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+              <div style="text-align:center">
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--yellow)">${totalEntradas}</div>
+                <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Total</div>
+              </div>
+              <div style="text-align:center">
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--green)">${totalQueue}</div>
+                <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Da Fila</div>
+              </div>
+              <div style="text-align:center">
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--purple)">${totalTransfer}</div>
+                <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Transferidas</div>
+              </div>
+            </div>
           </div>
-          <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--green);border-radius:7px;padding:10px;text-align:center">
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Da Fila SAC</div>
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--green)">${totalQueue}</div>
+
+          <!-- Saídas -->
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Ligacoes Realizadas</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div style="text-align:center">
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--orange)">${totalOutbound}</div>
+                <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Saidas</div>
+              </div>
+              <div style="text-align:center">
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--cyan);line-height:1.4">${stats.avgDuration || '—'}</div>
+                <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Duracao Media</div>
+              </div>
+            </div>
           </div>
-          <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--purple);border-radius:7px;padding:10px;text-align:center">
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Transferidas</div>
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--purple)">${totalTransfer}</div>
-          </div>
-          <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--orange);border-radius:7px;padding:10px;text-align:center">
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Saídas</div>
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--orange)">${totalOutbound}</div>
-          </div>
-          <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--cyan);border-radius:7px;padding:10px;text-align:center">
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Duração Média Total</div>
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--cyan);line-height:1.2">${stats.avgDuration || '—'}</div>
-          </div>
+
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:12px;padding:8px 4px;margin-bottom:4px">
           <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)">

@@ -177,6 +177,17 @@ export default async function handler(req, res) {
         return `${Math.floor(s/3600)}h ${Math.floor((s%3600)/60)}m`;
       };
 
+      // DEBUG temporário
+      const sacRawAll = items.filter(u => isSac(u.userName)).map(u => ({
+        name: u.userName,
+        inbound: u.dataValues.inboundVolume,
+        outbound: u.dataValues.outboundVolume,
+        volume: u.dataValues.volume,
+        queueCalls: u.dataValues.inboundQueueVolume,
+        totalDuration: u.dataValues.totalDuration,
+        avgDuration: u.dataValues.averageDuration
+      }));
+
       const sacAgents = items
         .filter(u => isSac(u.userName))
         .filter(u => (u.dataValues.totalDuration || 0) > 0) // só quem efetivamente atendeu
@@ -220,7 +231,8 @@ export default async function handler(req, res) {
         ...totals,
         agents: sacAgents,
         avgDuration: avgDurTotal,
-        sacNamesFound: sacNames.length
+        sacNamesFound: sacNames.length,
+        _debug: sacRawAll
       });
     }
 

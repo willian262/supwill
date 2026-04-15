@@ -233,22 +233,33 @@ export default async function handler(req, res) {
         queueCalls: acc.queueCalls + a.queueCalls
       }), { inbound: 0, outbound: 0, total: 0, queueCalls: 0 });
 
-      // % atendimento por fila
-      // Ligações atendidas por fila = soma de queueCalls dos agentes (já corrigido)
-      // Ligações recebidas = phone-number-activity da fila
-      const queuePerformance = Object.entries(SAC_QUEUES_MAP).map(([num, name]) => {
-        const activity = queueActivity.find(q => q.number === num);
-        const received = activity?.inbound || 0;
-        const answered = sacAgents.reduce((sum, a) => sum + a.queueCalls, 0);
-        return { queue: name, number: num, received, answered };
-      }).filter(q => q.received > 0);
+      // Buscar detalhes por usuário para identificar de qual fila veio cada ligação
+      // IDs das filas SAC no GoTo
+      const SAC_PROC_ID  = 'abee458c-f2a0-48a1-a2aa-4ffbc60783ff';
+      const SAC_TEC_ID   = 'aeb9c333-9899-43aa-9226-60ccda96e94e';
+
+      // Buscar user-activity por fila usando callQueueIds
+      const [procResp, tecResp] = await Promise.all([
+        fetch(`https://api.goto.com/call-reports/v1/reports/user-activity?organizationId=${ORG_ID}&startTime=${startOfDay}&endTime=${now}&pageSize=200&callQueueId=${SAC_PROC_ID}`,
+          { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`https://api.goto.com/call-reports/v1/reports/user-activity?organizationId=${ORG_ID}&startTime=${startOfDay}&endTime=${now}&pageSize=200&callQueueId=${SAC_TEC_ID}`,
+          { headers: { 'Authorization': `Bearer ${token}` } })
+      ]);
+      const procData = await procResp.json().catch(() => ({ items: [] }));
+      const tecData  = await tecResp.json().catch(() => ({ items: [] }));
+
+      const sumQueue = items => (items||[]).reduce((s, u) => s + (u.dataValues?.inboundQueueVolume || 0), 0);
+
+      const queuePerformance = [
+        { queue: 'SAC Processos', answered: sumQueue(procData.items), status: procResp.status },
+        { queue: 'SAC Técnico',   answered: sumQueue(tecData.items),  status: tecResp.status  }
+      ].filter(q => q.answered > 0 || q.status === 200);
 
       return res.status(200).json({
         ...totals,
         agents: sacAgents,
         queuePerformance,
-        sacNamesFound: sacNames.length,
-        _phoneDebug: (phoneData.items||[]).slice(0,5).map(p => ({ name: p.phoneNumberName, number: p.phoneNumber, inbound: p.dataValues?.inboundCallVolume }))
+        sacNamesFound: sacNames.length
       });
     }
 

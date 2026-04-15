@@ -97,9 +97,8 @@ export default async function handler(req, res) {
           });
         }
         const batch = data.results || [];
+        if (batch.length === 0) break;
         sac = sac.concat(batch);
-        // API Neppo retorna máximo 50 por página
-        if (batch.length < 50) break;
         page++;
         if (page > 20) break; // segurança
       }

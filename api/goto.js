@@ -177,17 +177,6 @@ export default async function handler(req, res) {
         return `${Math.floor(s/3600)}h ${Math.floor((s%3600)/60)}m`;
       };
 
-      // DEBUG temporário
-      const sacRawAll = items.filter(u => isSac(u.userName)).map(u => ({
-        name: u.userName,
-        inbound: u.dataValues.inboundVolume,
-        outbound: u.dataValues.outboundVolume,
-        volume: u.dataValues.volume,
-        queueCalls: u.dataValues.inboundQueueVolume,
-        totalDuration: u.dataValues.totalDuration,
-        avgDuration: u.dataValues.averageDuration
-      }));
-
       const sacAgents = items
         .filter(u => isSac(u.userName))
         .filter(u => (u.dataValues.totalDuration || 0) > 0) // só quem efetivamente atendeu
@@ -201,12 +190,15 @@ export default async function handler(req, res) {
             : (u.dataValues.inboundVolume || 0) + (u.dataValues.outboundVolume || 0);
           const realInbound = Math.min(u.dataValues.inboundVolume || 0, realTotal);
           const queueCalls  = Math.min(u.dataValues.inboundQueueVolume || 0, realInbound);
+          // queueCalls não pode ser maior que realTotal
+          const realQueue   = Math.min(queueCalls, realTotal);
+          const realInbound2 = Math.min(realInbound, realTotal);
           return {
             name: u.userName.replace(/\s*-\s*Sac\s*$/i, '').trim(),
-            inbound: realInbound,
+            inbound: realInbound2,
             outbound: u.dataValues.outboundVolume || 0,
             total: realTotal,
-            queueCalls,
+            queueCalls: realQueue,
             avgDuration: avgDur ? fmtDur(avgDur) : '—',
             totalDuration: totalDur ? fmtDur(totalDur) : '—',
             _totalDurMs: totalDur
@@ -231,8 +223,7 @@ export default async function handler(req, res) {
         ...totals,
         agents: sacAgents,
         avgDuration: avgDurTotal,
-        sacNamesFound: sacNames.length,
-        _debug: sacRawAll
+        sacNamesFound: sacNames.length
       });
     }
 

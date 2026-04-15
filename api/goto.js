@@ -177,16 +177,6 @@ export default async function handler(req, res) {
         return `${Math.floor(s/3600)}h ${Math.floor((s%3600)/60)}m`;
       };
 
-      // Debug temporário: mostrar TODOS os agentes SAC sem filtro de duração
-      const sacRawAll = items.filter(u => isSac(u.userName)).map(u => ({
-        name: u.userName,
-        inbound: u.dataValues.inboundVolume,
-        queueCalls: u.dataValues.inboundQueueVolume,
-        totalDuration: u.dataValues.totalDuration,
-        avgDuration: u.dataValues.averageDuration,
-        volume: u.dataValues.volume
-      }));
-
       const sacAgents = items
         .filter(u => isSac(u.userName))
         .filter(u => (u.dataValues.totalDuration || 0) > 0) // só quem efetivamente atendeu
@@ -223,8 +213,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         ...totals,
         agents: sacAgents,
-        sacNamesFound: sacNames.length,
-        _debug: sacRawAll
+        sacNamesFound: sacNames.length
       });
     }
 

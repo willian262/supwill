@@ -1,4 +1,4 @@
-# NeoSolar — Painel SAC!
+# NeoSolar — Painel SAC
 
 Dashboard para acompanhamento de tickets do Zoho Desk em tempo real.
 

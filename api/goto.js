@@ -119,9 +119,13 @@ export default async function handler(req, res) {
     if (path === 'queue-stats') {
       const ORG_ID = '6e9bbc00-5714-4f56-81e4-c1f12ebbf905';
 
-      // Busca atividade de usuários hoje — escopo cr.v1.read
+      // Testa com ontem para confirmar dados
+      const yesterday = new Date(Date.now() - 24*3600000 - 3*3600000).toISOString().slice(0,10);
+      const startYesterday = `${yesterday}T00:00:00Z`;
+      const endYesterday   = `${yesterday}T23:59:59Z`;
+
       const r = await fetch(
-        `https://api.goto.com/call-reports/v1/reports/user-activity?organizationId=${ORG_ID}&startTime=${startOfDay}&endTime=${now}&pageSize=100`,
+        `https://api.goto.com/call-reports/v1/reports/user-activity?organizationId=${ORG_ID}&startTime=${startYesterday}&endTime=${endYesterday}&pageSize=100`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       const data = await r.json();

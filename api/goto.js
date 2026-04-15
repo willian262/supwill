@@ -172,10 +172,32 @@ export default async function handler(req, res) {
     }
 
     if (path === 'dashboard') {
-      // Dashboard completo de telefonia
-      const [usersData, extensionsData] = await Promise.all([
-        gotoGet(`/users/v1/users?accountKey=${ACCOUNT_KEY}`, token),
-        gotoGet(`/voice-admin/v1/extensions?accountKey=${ACCOUNT_KEY}`, token)
+      // Busca agentes SAC da Neppo para cruzar com GoTo
+      let neppoAgentNames = [];
+      try {
+        const neppoRes = await fetch(`${process.env.VERCEL_URL ? 'https://'+process.env.VERCEL_URL : 'https://project-fj1lt.vercel.app'}/api/neppo?path=dashboard`);
+        const neppoData = await neppoRes.json();
+        neppoAgentNames = (neppoData.agents || [])
+          .filter(a => a.name !== 'Bot SAC')
+          .map(a => a.name.toLowerCase().trim());
+      } catch(e) {}
+
+      // Função para checar se nome GoTo bate com algum agente Neppo
+      const isSacAgent = (gotoName) => {
+        if (!gotoName || !neppoAgentNames.length) return true; // se Neppo falhou, mostra todos
+        const lower = gotoName.toLowerCase();
+        return neppoAgentNames.some(n => {
+          const parts = n.split(' ').filter(Boolean);
+          // Basta o primeiro nome + primeiro sobrenome baterem
+          if (parts.length >= 2) {
+            return lower.includes(parts[0]) && lower.includes(parts[1]);
+          }
+          return lower.includes(parts[0]);
+        });
+      };
+
+      const [usersData] = await Promise.all([
+        gotoGet(`/users/v1/users?accountKey=${ACCOUNT_KEY}`, token)
       ]);
 
       // Buscar presença
@@ -193,41 +215,37 @@ export default async function handler(req, res) {
         userMap[u.userKey] = {
           name: line?.name || u.userId,
           number: line?.number || '',
-          lineId: line?.id || ''
         };
       });
 
-      // Presença por userKey — campo é "appearance"
+      // Presença por userKey
       const presenceMap = {};
       (presenceData.items || []).forEach(p => {
         presenceMap[p.userKey] = p.appearance || 'OFFLINE';
       });
 
-      // Combinar
-      const agents = Object.entries(userMap).map(([key, info]) => ({
+      // Combinar e filtrar só SAC
+      const allAgents = Object.entries(userMap).map(([key, info]) => ({
         name: info.name,
         number: info.number,
         status: presenceMap[key] || 'OFFLINE'
-      })).filter(a => a.name);
+      }));
+
+      const agents = allAgents.filter(a => a.name && isSacAgent(a.name));
 
       const online  = agents.filter(a => a.status === 'AVAILABLE').length;
       const busy    = agents.filter(a => ['BUSY','ON_A_CALL'].includes(a.status)).length;
-      const away    = agents.filter(a => ['AWAY','DO_NOT_DISTURB','IDLE'].includes(a.status)).length;
+      const away    = agents.filter(a => ['AWAY','DO_NOT_DISTURB','IDLE','ONLINE'].includes(a.status)).length;
       const offline = agents.filter(a => a.status === 'OFFLINE').length;
-
-      // Debug: mostrar amostra do mapeamento
-      const sampleKeys = Object.keys(userMap).slice(0,3);
-      const samplePresence = Object.keys(presenceMap).slice(0,3);
 
       return res.status(200).json({
         totalAgents: agents.length,
         online, busy, away, offline,
-        agents: agents.sort((a,b) => a.name.localeCompare(b.name)),
-        _debug: {
-          userMapKeys: sampleKeys,
-          presenceKeys: samplePresence,
-          presenceTotal: Object.keys(presenceMap).length
-        }
+        agents: agents.sort((a,b) => {
+          const order = {'AVAILABLE':0,'ON_A_CALL':1,'BUSY':2,'AWAY':3,'IDLE':4,'ONLINE':5,'OFFLINE':6};
+          return (order[a.status]??9) - (order[b.status]??9);
+        }),
+        neppoAgentsFound: neppoAgentNames.length
       });
     }
 

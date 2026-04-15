@@ -254,6 +254,9 @@
   <button class="tab-btn" onclick="switchTab('neppo')" id="tabNeppo">
     <div class="tab-dot"></div>WhatsApp
   </button>
+  <button class="tab-btn" onclick="switchTab('goto')" id="tabGoto">
+    <div class="tab-dot"></div>Telefonia
+  </button>
 </div>
 
 <!-- LOADING -->
@@ -506,6 +509,52 @@
   </div>
 
   </div></div><!-- fim tab Neppo -->
+
+  <!-- ABA TELEFONIA -->
+  <div class="tab-panel" id="tabPanelGoto">
+  <div class="dash">
+
+    <div class="card" id="gotoCard">
+      <div class="card-head">
+        <span class="card-title">📞 Telefonia SAC — Ramais GoTo</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:10px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase" id="gotoUpdate">carregando...</span>
+          <span class="card-badge" id="gotoBadge">—</span>
+        </div>
+      </div>
+      <div style="padding:16px 18px;display:flex;flex-direction:column;gap:16px">
+
+        <!-- KPIs -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+          <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--yellow);border-radius:7px;padding:12px 14px;text-align:center">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Total Agentes</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--yellow)" id="gTotal">—</div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--green);border-radius:7px;padding:12px 14px;text-align:center">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Disponível</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--green)" id="gOnline">—</div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--orange);border-radius:7px;padding:12px 14px;text-align:center">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Em Chamada</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--orange)" id="gBusy">—</div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--red);border-radius:7px;padding:12px 14px;text-align:center">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Offline</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--red)" id="gOffline">—</div>
+          </div>
+        </div>
+
+        <!-- Agentes -->
+        <div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--yellow);margin-bottom:10px">Ramais por Agente</div>
+          <div id="gotoAgents" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+  </div><!-- fim tab Goto -->
 </div><!-- fim viewDash -->
 
 <script>
@@ -557,11 +606,14 @@
   }
 
   function switchTab(tab) {
-    document.getElementById('tabPanelZoho').classList.toggle('active', tab === 'zoho');
-    document.getElementById('tabPanelNeppo').classList.toggle('active', tab === 'neppo');
-    document.getElementById('tabZoho').classList.toggle('active', tab === 'zoho');
-    document.getElementById('tabNeppo').classList.toggle('active', tab === 'neppo');
+    ['zoho','neppo','goto'].forEach(t => {
+      const panel = document.getElementById('tabPanel' + t.charAt(0).toUpperCase() + t.slice(1));
+      const btn   = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+      if (panel) panel.classList.toggle('active', t === tab);
+      if (btn)   btn.classList.toggle('active',   t === tab);
+    });
     if (tab === 'neppo') loadNeppo();
+    if (tab === 'goto')  loadGoto();
   }
 
   async function loadData() {
@@ -1095,6 +1147,51 @@
 
     } catch(e) {
       document.getElementById('neppoUpdate').textContent = 'erro ao carregar';
+    }
+  }
+
+  // ── GoTo Telefonia ──
+  async function loadGoto() {
+    try {
+      const data = await fetch('/api/goto?path=dashboard').then(r => r.json());
+      const agents = data.agents || [];
+
+      document.getElementById('gTotal').textContent   = data.totalAgents || 0;
+      document.getElementById('gOnline').textContent  = data.online  || 0;
+      document.getElementById('gBusy').textContent    = (data.busy || 0) + (data.away || 0);
+      document.getElementById('gOffline').textContent = data.offline || 0;
+      document.getElementById('gotoBadge').textContent = `${data.totalAgents} ramais`;
+      document.getElementById('gotoUpdate').textContent =
+        'atualizado ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+
+      const statusColor = s => {
+        if (s === 'AVAILABLE') return 'var(--green)';
+        if (['BUSY','ON_A_CALL'].includes(s)) return 'var(--orange)';
+        if (['AWAY','DO_NOT_DISTURB','IDLE','ONLINE'].includes(s)) return 'var(--cyan)';
+        return 'var(--red)';
+      };
+      const statusLabel = s => {
+        if (s === 'AVAILABLE')  return '● Disponível';
+        if (s === 'ON_A_CALL')  return '📞 Em Chamada';
+        if (s === 'BUSY')       return '🔴 Ocupado';
+        if (s === 'AWAY')       return '⏸ Ausente';
+        if (s === 'ONLINE')     return '● Online';
+        if (s === 'OFFLINE')    return '○ Offline';
+        return '○ ' + (s || 'Offline');
+      };
+
+      document.getElementById('gotoAgents').innerHTML = agents.map(a => {
+        const firstName = a.name.replace(/\s*-\s*Sac\s*$/i, '').split(' ')[0];
+        return `
+        <div style="background:var(--surface2);border:1px solid var(--border);border-left:3px solid ${statusColor(a.status)};border-radius:7px;padding:10px 12px">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px">${firstName}</div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:6px">Ramal ${a.number}</div>
+          <div style="font-size:10px;color:${statusColor(a.status)};font-weight:600;text-transform:uppercase;letter-spacing:1px">${statusLabel(a.status)}</div>
+        </div>`;
+      }).join('') || '<div style="color:var(--muted);font-size:12px">Nenhum agente encontrado</div>';
+
+    } catch(e) {
+      document.getElementById('gotoUpdate').textContent = 'erro ao carregar';
     }
   }
 

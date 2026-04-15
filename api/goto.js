@@ -377,9 +377,11 @@ export default async function handler(req, res) {
 
       const agents = allAgents.filter(a => a.name && isSacAgent(a.name));
 
-      const online  = agents.filter(a => a.status === 'AVAILABLE').length;
-      const busy    = agents.filter(a => ['BUSY','ON_A_CALL'].includes(a.status)).length;
-      const away    = agents.filter(a => ['AWAY','DO_NOT_DISTURB','IDLE','ONLINE'].includes(a.status)).length;
+      // Status GoTo: AVAILABLE=disponível, BUSY/ON_A_CALL=em chamada, AWAY/DO_NOT_DISTURB=ausente, OFFLINE=offline
+      // ONLINE = ramal conectado mas não necessariamente em chamada (tratar como disponível)
+      const online  = agents.filter(a => ['AVAILABLE','ONLINE'].includes(a.status)).length;
+      const busy    = agents.filter(a => ['BUSY','ON_A_CALL','RINGING'].includes(a.status)).length;
+      const away    = agents.filter(a => ['AWAY','DO_NOT_DISTURB','IDLE'].includes(a.status)).length;
       const offline = agents.filter(a => a.status === 'OFFLINE').length;
 
       return res.status(200).json({

@@ -1123,20 +1123,15 @@
           Sem class.: ~${avg(semClsData30)}/dia
         </div>`;
 
-      // Calcular linha de tendência (regressão linear simples)
-      const trendLine = data => {
-        const n = data.length;
-        const sumX = data.reduce((s,_,i) => s+i, 0);
-        const sumY = data.reduce((s,v) => s+v, 0);
-        const sumXY = data.reduce((s,v,i) => s+i*v, 0);
-        const sumX2 = data.reduce((s,_,i) => s+i*i, 0);
-        const slope = (n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX);
-        const intercept = (sumY - slope*sumX) / n;
-        return data.map((_,i) => Math.max(0, parseFloat((intercept + slope*i).toFixed(2))));
-      };
+      // Média móvel 7 dias
+      const movingAvg = (data, window = 7) => data.map((_, i) => {
+        const start = Math.max(0, i - window + 1);
+        const slice = data.slice(start, i + 1);
+        return parseFloat((slice.reduce((a,b) => a+b, 0) / slice.length).toFixed(2));
+      });
 
-      const trendProc = trendLine(procData30);
-      const trendTec  = trendLine(tecData30);
+      const trendProc = movingAvg(procData30);
+      const trendTec  = movingAvg(tecData30);
 
       if (window._teamChart) window._teamChart.destroy();
       const ctx2 = document.getElementById('teamChart').getContext('2d');
@@ -1148,8 +1143,8 @@
             { label: 'Processos',    data: procData30,   backgroundColor: 'rgba(255,208,76,0.7)',  borderColor: '#FFD04C', borderWidth: 1, borderRadius: 3 },
             { label: 'Técnico',      data: tecData30,    backgroundColor: 'rgba(34,211,238,0.7)',  borderColor: '#22d3ee', borderWidth: 1, borderRadius: 3 },
             { label: 'Sem class.',   data: semClsData30, backgroundColor: 'rgba(136,133,128,0.5)', borderColor: '#888580', borderWidth: 1, borderRadius: 3 },
-            { label: 'Tend. Proc',   data: trendProc, type: 'line', borderColor: '#FFD04C', borderWidth: 2, borderDash: [4,4], pointRadius: 0, fill: false, tension: 0.3, yAxisID: 'y' },
-            { label: 'Tend. Téc',    data: trendTec,  type: 'line', borderColor: '#22d3ee', borderWidth: 2, borderDash: [4,4], pointRadius: 0, fill: false, tension: 0.3, yAxisID: 'y' }
+            { label: 'MM7 Proc', data: trendProc, type: 'line', borderColor: '#FFD04C', borderWidth: 2, borderDash: [4,4], pointRadius: 0, fill: false, tension: 0.4, yAxisID: 'y' },
+            { label: 'MM7 Téc',  data: trendTec,  type: 'line', borderColor: '#22d3ee', borderWidth: 2, borderDash: [4,4], pointRadius: 0, fill: false, tension: 0.4, yAxisID: 'y' }
           ]
         },
         options: {
@@ -1160,7 +1155,7 @@
             tooltip: {
               backgroundColor: '#202020', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
               titleColor: '#f0ede8', bodyColor: '#888580',
-              filter: item => !item.dataset.label.startsWith('Tend.')
+              filter: item => !item.dataset.label.startsWith('MM7')
             }
           },
           scales: {

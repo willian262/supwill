@@ -531,7 +531,7 @@
             <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--yellow)" id="gTotal">—</div>
           </div>
           <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--green);border-radius:7px;padding:12px 14px;text-align:center">
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Disponível</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Conectado</div>
             <div style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--green)" id="gOnline">—</div>
           </div>
           <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--orange);border-radius:7px;padding:12px 14px;text-align:center">
@@ -1181,18 +1181,21 @@
         'atualizado ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
 
       const statusColor = s => {
-        if (s === 'AVAILABLE') return 'var(--green)';
-        if (['BUSY','ON_A_CALL'].includes(s)) return 'var(--orange)';
-        if (['AWAY','DO_NOT_DISTURB','IDLE','ONLINE'].includes(s)) return 'var(--cyan)';
+        if (['AVAILABLE','ONLINE'].includes(s))    return 'var(--green)';
+        if (['BUSY','ON_A_CALL','RINGING'].includes(s)) return 'var(--orange)';
+        if (['AWAY','DO_NOT_DISTURB','IDLE'].includes(s)) return 'var(--cyan)';
         return 'var(--red)';
       };
       const statusLabel = s => {
-        if (s === 'AVAILABLE')  return '● Disponível';
-        if (s === 'ON_A_CALL')  return '📞 Em Chamada';
-        if (s === 'BUSY')       return '🔴 Ocupado';
-        if (s === 'AWAY')       return '⏸ Ausente';
-        if (s === 'ONLINE')     return '● Online';
-        if (s === 'OFFLINE')    return '○ Offline';
+        if (s === 'AVAILABLE')        return '● Disponível';
+        if (s === 'ONLINE')           return '● Conectado';
+        if (s === 'ON_A_CALL')        return '📞 Em Chamada';
+        if (s === 'BUSY')             return '📞 Em Chamada';
+        if (s === 'RINGING')          return '🔔 Chamando';
+        if (s === 'AWAY')             return '⏸ Ausente';
+        if (s === 'DO_NOT_DISTURB')   return '🔕 Não Perturbe';
+        if (s === 'IDLE')             return '⏸ Inativo';
+        if (s === 'OFFLINE')          return '○ Offline';
         return '○ ' + (s || 'Offline');
       };
 

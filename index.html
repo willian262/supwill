@@ -308,9 +308,9 @@
       <span class="card-title">Fluxo Diário</span>
       <div style="display:flex;align-items:center;gap:12px">
         <div style="display:flex;gap:4px" id="fluxoPeriodBtns">
-          <button onclick="setFluxoPeriod(7)"  id="fluxoBtn7"  style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer">7d</button>
-          <button onclick="setFluxoPeriod(15)" id="fluxoBtn15" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer">15d</button>
-          <button onclick="setFluxoPeriod(30)" id="fluxoBtn30" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid var(--border-y);background:var(--yellow-dim);color:var(--yellow);cursor:pointer">30d</button>
+          <button onclick="setChartPeriod('fluxo',7)"  id="fluxoBtn7"  style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer">7d</button>
+          <button onclick="setChartPeriod('fluxo',15)" id="fluxoBtn15" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer">15d</button>
+          <button onclick="setChartPeriod('fluxo',30)" id="fluxoBtn30" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid var(--border-y);background:var(--yellow-dim);color:var(--yellow);cursor:pointer">30d</button>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:20px">
@@ -353,9 +353,9 @@
           <div style="width:10px;height:10px;border-radius:2px;background:var(--subtle)"></div>Sem classificação
         </div>
         <div style="display:flex;gap:4px" id="teamPeriodBtns">
-          <button onclick="setFluxoPeriod(7)"  id="teamBtn7"  style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer">7d</button>
-          <button onclick="setFluxoPeriod(15)" id="teamBtn15" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer">15d</button>
-          <button onclick="setFluxoPeriod(30)" id="teamBtn30" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid var(--border-y);background:var(--yellow-dim);color:var(--yellow);cursor:pointer">30d</button>
+          <button onclick="setChartPeriod('team',7)"  id="teamBtn7"  style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer">7d</button>
+          <button onclick="setChartPeriod('team',15)" id="teamBtn15" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer">15d</button>
+          <button onclick="setChartPeriod('team',30)" id="teamBtn30" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid var(--border-y);background:var(--yellow-dim);color:var(--yellow);cursor:pointer">30d</button>
         </div>
         <div style="display:flex;gap:10px" id="teamAvgBadges"></div>
       </div>
@@ -967,55 +967,47 @@
     }
   }
 
-  // Período selecionado (padrão 30 dias)
+  // Períodos independentes para cada gráfico
   window._fluxoPeriod = 30;
+  window._teamPeriod  = 30;
   window._fluxoDataCache = null;
 
-  function setFluxoPeriod(days) {
-    window._fluxoPeriod = days;
-    // Atualizar botões fluxo
+  function setChartPeriod(chart, days) {
+    const isFluxo = chart === 'fluxo';
+    if (isFluxo) window._fluxoPeriod = days;
+    else         window._teamPeriod  = days;
+
+    const prefix = isFluxo ? 'fluxo' : 'team';
+    const activeStyle   = 'border:1px solid rgba(255,208,76,0.2);background:rgba(255,208,76,0.12);color:#FFD04C';
+    const inactiveStyle = 'border:1px solid rgba(255,255,255,0.07);background:transparent;color:#888580';
     [7,15,30].forEach(d => {
-      const btn = document.getElementById('fluxoBtn'+d);
-      const btn2 = document.getElementById('teamBtn'+d);
+      const btn = document.getElementById(prefix+'Btn'+d);
+      if (!btn) return;
       const active = d === days;
-      const activeStyle = 'border:1px solid var(--border-y);background:var(--yellow-dim);color:var(--yellow)';
-      const inactiveStyle = 'border:1px solid var(--border);background:transparent;color:var(--muted)';
-      if (btn)  btn.style.cssText  = btn.style.cssText.replace(/border[^;]+;background[^;]+;color[^;]+/, active ? activeStyle : inactiveStyle);
-      if (btn2) btn2.style.cssText = btn2.style.cssText.replace(/border[^;]+;background[^;]+;color[^;]+/, active ? activeStyle : inactiveStyle);
+      btn.setAttribute('style', btn.getAttribute('style').replace(/border:[^;]+;background:[^;]+;color:[^;]+/, active ? activeStyle : inactiveStyle));
     });
-    if (window._fluxoDataCache) renderFluxoCharts(window._fluxoDataCache, days);
+
+    if (!window._fluxoDataCache) return;
+    if (isFluxo) renderFluxoChart(window._fluxoDataCache, days);
+    else         renderTeamChart(window._fluxoDataCache, days);
   }
 
-  function renderFluxoCharts(cache, periodDays) {
-    const { allDays, abertos, fechados, procFech, tecFech, semClsFech, labels30, agentNames, agentPhotos, closed } = cache;
+  const mm7 = (data, w=7) => data.map((_,i) => {
+    const sl = data.slice(Math.max(0,i-w+1), i+1);
+    return parseFloat((sl.reduce((a,b)=>a+b,0)/sl.length).toFixed(2));
+  });
+  const avg = arr => { const nz = arr.filter(v=>v>0); return nz.length ? (nz.reduce((a,b)=>a+b,0)/nz.length).toFixed(1) : '0'; };
 
-    // Filtrar pelos últimos N dias
-    const n = periodDays;
-    const days    = allDays.slice(-n);
-    const labels  = labels30.slice(-n);
-    const aData   = days.map(d => abertos[d]  || 0);
-    const fData   = days.map(d => fechados[d] || 0);
-    const procData30   = days.map(d => procFech[d]   || 0);
-    const tecData30    = days.map(d => tecFech[d]    || 0);
-    const semClsData30 = days.map(d => semClsFech[d] || 0);
-
-    const saldoTotal = fData.reduce((s,v)=>s+v,0) - aData.reduce((s,v)=>s+v,0);
+  function renderFluxoChart(cache, n) {
+    const { allDays, abertos, fechados, labels30 } = cache;
+    const days   = allDays.slice(-n);
+    const labels = labels30.slice(-n);
+    const aData  = days.map(d => abertos[d]  || 0);
+    const fData  = days.map(d => fechados[d] || 0);
+    const saldo  = fData.reduce((s,v)=>s+v,0) - aData.reduce((s,v)=>s+v,0);
     const saldoEl = document.getElementById('fluxoBadge');
-    saldoEl.textContent = saldoTotal >= 0 ? '+'+saldoTotal : ''+saldoTotal;
-    saldoEl.style.color = saldoTotal >= 0 ? 'var(--green)' : 'var(--red)';
-
-    const avg = arr => { const nz = arr.filter(v=>v>0); return nz.length ? (nz.reduce((a,b)=>a+b,0)/nz.length).toFixed(1) : '0'; };
-    document.getElementById('teamAvgBadges').innerHTML = `
-      <div style="background:rgba(255,208,76,0.1);border:1px solid rgba(255,208,76,0.2);border-radius:4px;padding:2px 8px;font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--yellow)">Proc: ~${avg(procData30)}/dia</div>
-      <div style="background:rgba(34,211,238,0.1);border:1px solid rgba(34,211,238,0.2);border-radius:4px;padding:2px 8px;font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--cyan)">Téc: ~${avg(tecData30)}/dia</div>
-      <div style="background:rgba(136,133,128,0.1);border:1px solid rgba(136,133,128,0.2);border-radius:4px;padding:2px 8px;font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--muted)">Sem class.: ~${avg(semClsData30)}/dia</div>`;
-
-    const mm7 = (data, w=7) => data.map((_,i) => {
-      const sl = data.slice(Math.max(0,i-w+1), i+1);
-      return parseFloat((sl.reduce((a,b)=>a+b,0)/sl.length).toFixed(2));
-    });
-
-    // Gráfico fluxo
+    saldoEl.textContent = (saldo>=0?'+':'')+saldo;
+    saldoEl.style.color = saldo >= 0 ? 'var(--green)' : 'var(--red)';
     if (window._fluxoChart) window._fluxoChart.destroy();
     const ctx = document.getElementById('fluxoChart').getContext('2d');
     window._fluxoChart = new Chart(ctx, {
@@ -1034,18 +1026,29 @@
         scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#888580', font: { size: 10 } } }, y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#888580', font: { size: 10 }, stepSize: 5 }, beginAtZero: true } }
       }
     });
+  }
 
-    // Gráfico por time
+  function renderTeamChart(cache, n) {
+    const { allDays, procFech, tecFech, semClsFech, labels30 } = cache;
+    const days        = allDays.slice(-n);
+    const labels      = labels30.slice(-n);
+    const procData    = days.map(d => procFech[d]   || 0);
+    const tecData     = days.map(d => tecFech[d]    || 0);
+    const semClsData  = days.map(d => semClsFech[d] || 0);
+    document.getElementById('teamAvgBadges').innerHTML =
+      `<div style="background:rgba(255,208,76,0.1);border:1px solid rgba(255,208,76,0.2);border-radius:4px;padding:2px 8px;font-size:11px;color:var(--yellow)">Proc: ~${avg(procData)}/dia</div>` +
+      `<div style="background:rgba(34,211,238,0.1);border:1px solid rgba(34,211,238,0.2);border-radius:4px;padding:2px 8px;font-size:11px;color:var(--cyan)">Téc: ~${avg(tecData)}/dia</div>` +
+      `<div style="background:rgba(136,133,128,0.1);border:1px solid rgba(136,133,128,0.2);border-radius:4px;padding:2px 8px;font-size:11px;color:var(--muted)">Sem class.: ~${avg(semClsData)}/dia</div>`;
     if (window._teamChart) window._teamChart.destroy();
     const ctx2 = document.getElementById('teamChart').getContext('2d');
     window._teamChart = new Chart(ctx2, {
       type: 'bar',
       data: { labels, datasets: [
-        { label: 'Processos',   data: procData30,   backgroundColor: 'rgba(255,208,76,0.7)', borderColor: '#FFD04C', borderWidth: 1, borderRadius: 3 },
-        { label: 'Técnico',     data: tecData30,    backgroundColor: 'rgba(34,211,238,0.7)', borderColor: '#22d3ee', borderWidth: 1, borderRadius: 3 },
-        { label: 'Sem class.',  data: semClsData30, backgroundColor: 'rgba(136,133,128,0.5)', borderColor: '#888580', borderWidth: 1, borderRadius: 3 },
-        { label: 'MM7 Proc',    data: mm7(procData30),   type: 'line', borderColor: '#FFD04C', borderWidth: 2, borderDash: [4,4], pointRadius: 0, fill: false, tension: 0.4 },
-        { label: 'MM7 Téc',     data: mm7(tecData30),    type: 'line', borderColor: '#22d3ee', borderWidth: 2, borderDash: [4,4], pointRadius: 0, fill: false, tension: 0.4 },
+        { label: 'Processos',  data: procData,   backgroundColor: 'rgba(255,208,76,0.7)', borderColor: '#FFD04C', borderWidth: 1, borderRadius: 3 },
+        { label: 'Técnico',    data: tecData,    backgroundColor: 'rgba(34,211,238,0.7)', borderColor: '#22d3ee', borderWidth: 1, borderRadius: 3 },
+        { label: 'Sem class.', data: semClsData, backgroundColor: 'rgba(136,133,128,0.5)', borderColor: '#888580', borderWidth: 1, borderRadius: 3 },
+        { label: 'MM7 Proc',   data: mm7(procData),  type: 'line', borderColor: '#FFD04C', borderWidth: 2, borderDash: [4,4], pointRadius: 0, fill: false, tension: 0.4 },
+        { label: 'MM7 Téc',    data: mm7(tecData),   type: 'line', borderColor: '#22d3ee', borderWidth: 2, borderDash: [4,4], pointRadius: 0, fill: false, tension: 0.4 },
       ]},
       options: { responsive: true, interaction: { mode: 'index', intersect: false },
         plugins: { legend: { display: false }, tooltip: { backgroundColor: '#202020', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, titleColor: '#f0ede8', bodyColor: '#888580', filter: item => !item.dataset.label.startsWith('MM7') }},
@@ -1177,7 +1180,8 @@
 
       // Salvar cache e renderizar com período atual
       window._fluxoDataCache = { allDays, abertos, fechados, procFech, tecFech, semClsFech, labels30, agentNames, agentPhotos, closed };
-      renderFluxoCharts(window._fluxoDataCache, window._fluxoPeriod || 30);
+      renderFluxoChart(window._fluxoDataCache, window._fluxoPeriod || 30);
+      renderTeamChart(window._fluxoDataCache, window._teamPeriod || 30);
     } catch(e) {
       document.getElementById('fluxoBadge').textContent = 'erro ao carregar';
     }

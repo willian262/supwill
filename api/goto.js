@@ -275,7 +275,11 @@ export default async function handler(req, res) {
           const order = {'AVAILABLE':0,'ON_A_CALL':1,'BUSY':2,'AWAY':3,'IDLE':4,'ONLINE':5,'OFFLINE':6};
           return (order[a.status]??9) - (order[b.status]??9);
         }),
-        neppoAgentsFound: neppoAgentNames.length
+        neppoAgentsFound: neppoAgentNames.length,
+        _debug: {
+          neppoNames: neppoAgentNames,
+          gotoNamesSample: allAgents.slice(0,10).map(a => a.name)
+        }
       });
     }
 

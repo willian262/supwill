@@ -112,43 +112,35 @@ export default async function handler(req, res) {
     }
 
     if (path === 'queues') {
-      const data = await gotoGet(`/voice-admin/v1/accounts/${ACCOUNT_KEY}/queues`, token);
+      // Filas de atendimento
+      const data = await gotoGet(`/voice-admin/v1/queues?accountKey=${ACCOUNT_KEY}`, token);
+      return res.status(200).json(data);
+    }
+
+    if (path === 'extensions') {
+      // Ramais/extensões
+      const data = await gotoGet(`/voice-admin/v1/extensions?accountKey=${ACCOUNT_KEY}`, token);
       return res.status(200).json(data);
     }
 
     if (path === 'calls-today') {
+      // Relatório de chamadas de hoje
       const data = await gotoGet(
-        `/call-events/v1/accounts/${ACCOUNT_KEY}/calls?startTime=${startOfDay}&endTime=${now}`,
+        `/call-events-report/v1/report-summaries?accountKey=${ACCOUNT_KEY}&startTime=${startOfDay}&endTime=${now}`,
         token
       );
-      return res.status(200).json(data);
-    }
-
-    if (path === 'realtime') {
-      const data = await gotoGet(`/presence/v1/accounts/${ACCOUNT_KEY}/presence`, token);
-      return res.status(200).json(data);
-    }
-
-    if (path === 'agents-status') {
-      const data = await gotoGet(`/presence/v1/accounts/${ACCOUNT_KEY}/users`, token);
-      return res.status(200).json(data);
-    }
-
-    if (path === 'call-history') {
-      const data = await gotoGet(
-        `/call-history/v1/accounts/${ACCOUNT_KEY}/calls?startTime=${startOfDay}&endTime=${now}`,
-        token
-      );
-      return res.status(200).json(data);
-    }
-
-    if (path === 'lines') {
-      const data = await gotoGet(`/voice-admin/v1/accounts/${ACCOUNT_KEY}/lines`, token);
       return res.status(200).json(data);
     }
 
     if (path === 'users') {
-      const data = await gotoGet(`/users/v1/accounts/${ACCOUNT_KEY}/users`, token);
+      // Usuários da conta
+      const data = await gotoGet(`/users/v1/users?accountKey=${ACCOUNT_KEY}`, token);
+      return res.status(200).json(data);
+    }
+
+    if (path === 'phone-numbers') {
+      // Números de telefone
+      const data = await gotoGet(`/voice-admin/v1/phone-numbers?accountKey=${ACCOUNT_KEY}`, token);
       return res.status(200).json(data);
     }
 

@@ -837,7 +837,7 @@
         const daysLabel = days < 1 ? 'hoje' : `${Math.floor(days)}d`;
         return `<div class="health-ticket" style="--indicator-color:${color}">
           <div class="health-ticket-left">
-            <div class="health-ticket-num">#${t.ticketNumber} <span style="font-weight:400;color:var(--muted);font-size:10px">${agentName(t)}</span></div>
+            <div class="health-ticket-num"><a href="https://suporte.neosolar.com.br/agent/neosolar215/sac/tickets/details/${t.id}" target="_blank" style="color:var(--yellow);text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">#${t.ticketNumber}</a> <span style="font-weight:400;color:var(--muted);font-size:10px">${agentName(t)}</span></div>
             <div class="health-ticket-name" title="${t.subject||''}">${t.subject||'(sem assunto)'}</div>
           </div>
           <div class="health-ticket-days" style="color:${color}">${daysLabel}</div>

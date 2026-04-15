@@ -313,6 +313,9 @@
         <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
           <div style="width:10px;height:10px;border-radius:2px;background:var(--green)"></div>Fechados
         </div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
+          <div style="width:18px;height:2px;border-top:2px dashed var(--muted)"></div>MM7
+        </div>
 
         <div style="display:flex;flex-direction:column;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 14px;min-width:90px">
           <span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Saldo 30d</span>
@@ -1168,29 +1171,19 @@
       // Destroi chart anterior se existir
       if (window._fluxoChart) window._fluxoChart.destroy();
 
+      const mm7Abertos  = movingAvg(aData);
+      const mm7Fechados = movingAvg(fData);
+
       const ctx = document.getElementById('fluxoChart').getContext('2d');
       window._fluxoChart = new Chart(ctx, {
         type: 'bar',
         data: {
           labels,
           datasets: [
-            {
-              label: 'Abertos',
-              data: aData,
-              backgroundColor: 'rgba(255,208,76,0.7)',
-              borderColor: '#FFD04C',
-              borderWidth: 1,
-              borderRadius: 3,
-            },
-            {
-              label: 'Fechados',
-              data: fData,
-              backgroundColor: 'rgba(94,201,135,0.7)',
-              borderColor: '#5ec987',
-              borderWidth: 1,
-              borderRadius: 3,
-            },
-
+            { label: 'Abertos',  data: aData, backgroundColor: 'rgba(255,208,76,0.7)', borderColor: '#FFD04C', borderWidth: 1, borderRadius: 3 },
+            { label: 'Fechados', data: fData, backgroundColor: 'rgba(94,201,135,0.7)', borderColor: '#5ec987', borderWidth: 1, borderRadius: 3 },
+            { label: 'MM7 Abertos',  data: mm7Abertos,  type: 'line', borderColor: '#FFD04C', borderWidth: 2, borderDash: [4,4], pointRadius: 0, fill: false, tension: 0.4 },
+            { label: 'MM7 Fechados', data: mm7Fechados, type: 'line', borderColor: '#5ec987', borderWidth: 2, borderDash: [4,4], pointRadius: 0, fill: false, tension: 0.4 },
           ]
         },
         options: {
@@ -1204,6 +1197,7 @@
               borderWidth: 1,
               titleColor: '#f0ede8',
               bodyColor: '#888580',
+              filter: item => !item.dataset.label.startsWith('MM7'),
               callbacks: {
                 afterBody: (items) => {
                   const a = items.find(i=>i.dataset.label==='Abertos')?.parsed.y||0;

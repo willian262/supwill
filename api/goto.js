@@ -116,27 +116,42 @@ export default async function handler(req, res) {
       return res.status(200).json(data);
     }
 
-    if (path === 'queue-status') {
-      // Tenta vários endpoints de status de fila em tempo real
-      const SAC_IDS = [
+    if (path === 'queue-stats') {
+      // API contact-center-reports via api.jive.com
+      const ORG_ID = '6e9bbc00-5714-4f56-81e4-c1f12ebbf905';
+      const BASE_JIVE = 'https://api.jive.com';
+
+      const jiveGet = async (p) => {
+        const r = await fetch(`${BASE_JIVE}${p}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const t = await r.text();
+        try { return JSON.parse(t); } catch(e) { return { raw: t.slice(0,300) }; }
+      };
+
+      // Busca dados de hoje por fila SAC
+      const SAC_QUEUE_IDS = [
         'abee458c-f2a0-48a1-a2aa-4ffbc60783ff', // SAC PROCESSOS
+        'c605723a-7456-4980-94da-b4e1a39bb5be', // SAC PROCESSOS GD
+        '633181e3-490f-4967-82ad-120e5bb92718', // SAC PROCESSOS VE
         'aeb9c333-9899-43aa-9226-60ccda96e94e', // SAC TÉCNICO
-      ];
-      const attempts = {};
-      const paths = [
-        `/voice-admin/v1/call-queues/${SAC_IDS[0]}/status`,
-        `/voice-admin/v1/call-queues/${SAC_IDS[0]}/stats`,
-        `/call-reports/v1/queues/${SAC_IDS[0]}`,
-        `/cr/v1/queues?accountKey=${ACCOUNT_KEY}`,
-        `/cr/v1/accounts/${ACCOUNT_KEY}/queues`,
-        `/voice-admin/v1/call-queues/${SAC_IDS[0]}/real-time`,
-        `/reporting/v1/queues?accountKey=${ACCOUNT_KEY}&startTime=${startOfDay}&endTime=${now}`,
-      ];
-      for (const p of paths) {
-        const d = await gotoGet(p, token).catch(e => ({ error: e.message }));
-        attempts[p] = d?.errorCode ? d.errorCode : (d?.items ? `${d.items.length} items` : JSON.stringify(d).slice(0,100));
-      }
-      return res.status(200).json(attempts);
+        'b383c456-66f5-462f-a77b-ab20a075d02a', // SAC TÉCNICO BOMBEAMENTO
+        '7fc41106-4cfb-4ab6-b69b-39d48a3682f0', // SAC TÉCNICO GD
+        '9e08baa5-f1ad-4519-a785-e4680e2eb3b0', // SAC TÉCNICO VE
+      ].join('&filters=callQueues&callQueues=');
+
+      const url = `/contact-center-reports/v1/organizations/${ORG_ID}/filters` +
+        `?startTime=${startOfDay}&endTime=${now}` +
+        `&filters=callQueues&callQueues=${SAC_QUEUE_IDS}` +
+        `&filters=callOutcomes&filters=dispositions&filters=tags&filters=topics` +
+        `&filters=leftQueueReasons&filters=topicFlags`;
+
+      const data = await jiveGet(url);
+      return res.status(200).json(data);
+    }
+
+    if (path === 'queue-status') {
+      return res.status(200).json({ message: 'use queue-stats' });
     }
 
     if (path === 'queue-members') {

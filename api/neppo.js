@@ -227,14 +227,14 @@ export default async function handler(req, res) {
       todayStart.setHours(0,0,0,0);
       const todayISO = todayStart.toISOString();
 
-      // Buscar sessões SAC fechadas hoje
+      // Buscar sessões SAC ativas (sem filtro de data — pegar as atuais)
       let sessions = [];
       let page = 0;
       while (true) {
         const data = await neppoPost('/chatapi/1.0/api/user-session', {
           conditions: [
             { key: 'groupConf.operation.operationName', value: 'Sac', operator: 'EQ', logic: 'AND' },
-            { key: 'createdAt', value: todayISO, operator: 'AFTER', logic: 'AND' }
+            { key: 'status', value: 'CLOSED', operator: 'NEQ', logic: 'AND' }
           ],
           sort: true, sortColumn: 'id', direction: 'DESC', page, size: 50
         }, token);

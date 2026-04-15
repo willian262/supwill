@@ -117,36 +117,50 @@ export default async function handler(req, res) {
     }
 
     if (path === 'queue-stats') {
-      // API contact-center-reports via api.jive.com
-      const ORG_ID = '6e9bbc00-5714-4f56-81e4-c1f12ebbf905';
+      const ORG_ID  = '6e9bbc00-5714-4f56-81e4-c1f12ebbf905';
+      const DASH_ID = '8fd29c96-8a14-4e94-9a4c-28463f20cb64';
       const BASE_JIVE = 'https://api.jive.com';
 
-      const jiveGet = async (p) => {
-        const r = await fetch(`${BASE_JIVE}${p}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+      // Filas SAC — IDs e nomes
+      const SAC_QUEUES = [
+        { id: 'abee458c-f2a0-48a1-a2aa-4ffbc60783ff', name: 'SAC Processos' },
+        { id: 'c605723a-7456-4980-94da-b4e1a39bb5be', name: 'SAC Processos GD' },
+        { id: '633181e3-490f-4967-82ad-120e5bb92718', name: 'SAC Processos VE' },
+        { id: 'aeb9c333-9899-43aa-9226-60ccda96e94e', name: 'SAC Técnico' },
+        { id: 'b383c456-66f5-462f-a77b-ab20a075d02a', name: 'SAC Técnico Bombeamento' },
+        { id: '7fc41106-4cfb-4ab6-b69b-39d48a3682f0', name: 'SAC Técnico GD' },
+        { id: '9e08baa5-f1ad-4519-a785-e4680e2eb3b0', name: 'SAC Técnico VE' },
+      ];
+
+      const jivePost = async (path, body) => {
+        const r = await fetch(`${BASE_JIVE}${path}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(body)
         });
         const t = await r.text();
         try { return JSON.parse(t); } catch(e) { return { raw: t.slice(0,300) }; }
       };
 
-      // Busca dados de hoje por fila SAC
-      const SAC_QUEUE_IDS = [
-        'abee458c-f2a0-48a1-a2aa-4ffbc60783ff', // SAC PROCESSOS
-        'c605723a-7456-4980-94da-b4e1a39bb5be', // SAC PROCESSOS GD
-        '633181e3-490f-4967-82ad-120e5bb92718', // SAC PROCESSOS VE
-        'aeb9c333-9899-43aa-9226-60ccda96e94e', // SAC TÉCNICO
-        'b383c456-66f5-462f-a77b-ab20a075d02a', // SAC TÉCNICO BOMBEAMENTO
-        '7fc41106-4cfb-4ab6-b69b-39d48a3682f0', // SAC TÉCNICO GD
-        '9e08baa5-f1ad-4519-a785-e4680e2eb3b0', // SAC TÉCNICO VE
-      ].join('&filters=callQueues&callQueues=');
+      const body = {
+        filters: [{
+          type: 'FILTER',
+          property: 'queues',
+          format: null,
+          filterValues: SAC_QUEUES.map(q => ({ operator: 'equals', value: q.id }))
+        }],
+        timeDimension: {
+          dateRange: [startOfDay, now],
+          granularity: 'hour'
+        },
+        timeZone: 'America/Sao_Paulo'
+      };
 
-      const url = `/contact-center-reports/v1/organizations/${ORG_ID}/filters` +
-        `?startTime=${startOfDay}&endTime=${now}` +
-        `&filters=callQueues&callQueues=${SAC_QUEUE_IDS}` +
-        `&filters=callOutcomes&filters=dispositions&filters=tags&filters=topics` +
-        `&filters=leftQueueReasons&filters=topicFlags`;
-
-      const data = await jiveGet(url);
+      const url = `/contact-center-reports/v1/organizations/${ORG_ID}/dashboards/${DASH_ID}/data-sources/QUEUE_CALLER_SUMMARY/query`;
+      const data = await jivePost(url, body);
       return res.status(200).json(data);
     }
 

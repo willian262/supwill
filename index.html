@@ -1248,13 +1248,25 @@
           </div>`).join('');
       }
 
-      // Pódio top 3 ligações
+      // Pódio top 3 ligações — sempre visível
+      document.getElementById('gotoPodioCont').style.display = 'block';
       const top3 = [...callAgents].sort((a,b) => b.total - a.total).slice(0,3);
-      if (top3.length > 0) {
-        document.getElementById('gotoPodioCont').style.display = 'block';
-        const MEDALS = ['🥇','🥈','🥉'];
-        const COLORS = ['var(--yellow)','#94a3b8','var(--orange)'];
-        // Reordena: 2º, 1º, 3º para visual de pódio
+      const MEDALS = ['🥇','🥈','🥉'];
+      const COLORS = ['var(--yellow)','#94a3b8','var(--orange)'];
+
+      if (top3.length === 0) {
+        document.getElementById('gotoPodio').innerHTML = ['🥇','🥈','🥉'].map((medal, i) => `
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center;opacity:0.4;margin-top:${i===1?'0':'14px'}">
+            <div style="font-size:${i===1?'28':'22'}px;margin-bottom:6px">${medal}</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;color:var(--muted);margin-bottom:10px">—</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:${i===1?'48':'36'}px;font-weight:800;line-height:1;color:var(--subtle)">0</div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">ligações</div>
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 8px">
+              <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Duração Média</div>
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--subtle)">—</div>
+            </div>
+          </div>`).join('');
+      } else {
         const order = top3.length >= 3 ? [top3[1], top3[0], top3[2]] : top3.length === 2 ? [top3[1], top3[0]] : top3;
         const ranks = top3.length >= 3 ? [1,0,2] : top3.length === 2 ? [1,0] : [0];
         document.getElementById('gotoPodio').innerHTML = order.map((a,vi) => {

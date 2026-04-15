@@ -221,6 +221,76 @@ export default async function handler(req, res) {
       });
     }
 
+    if (path === 'response-time') {
+      // Tempo médio de resposta por agente — baseado nas sessões SAC ativas + fechadas hoje
+      const todayStart = new Date();
+      todayStart.setHours(0,0,0,0);
+      const todayISO = todayStart.toISOString();
+
+      // Buscar sessões SAC fechadas hoje
+      let sessions = [];
+      let page = 0;
+      while (true) {
+        const data = await neppoPost('/chatapi/1.0/api/user-session', {
+          conditions: [
+            { key: 'groupConf.operation.operationName', value: 'Sac', operator: 'EQ', logic: 'AND' },
+            { key: 'createdAt', value: todayISO, operator: 'AFTER', logic: 'AND' }
+          ],
+          sort: true, sortColumn: 'id', direction: 'DESC', page, size: 50
+        }, token);
+        if (data.fault || data.message || data.error) break;
+        const batch = data.results || [];
+        if (batch.length === 0) break;
+        sessions = sessions.concat(batch);
+        page++;
+        if (page > 10) break;
+      }
+
+      // Agrupar por agente e calcular TMA (tempo médio de atendimento)
+      const agentMap = {};
+      const BOT_KW = ['pesquisa','@botserver','csat','nps','inatividade','inicial'];
+      const isBot = n => !n || BOT_KW.some(k => (n||'').toLowerCase().includes(k));
+
+      sessions.forEach(s => {
+        const name = s.agent?.displayName;
+        if (isBot(name)) return;
+        if (!s.tma && !s.tme) return; // sem dados de tempo
+        if (!agentMap[name]) agentMap[name] = { name, tmaTotal: 0, tmeTotal: 0, count: 0 };
+        if (s.tma) agentMap[name].tmaTotal += s.tma;
+        if (s.tme) agentMap[name].tmeTotal += s.tme;
+        agentMap[name].count++;
+      });
+
+      const fmtMs = ms => {
+        if (!ms) return null;
+        const s = Math.round(ms / 1000);
+        if (s < 60) return s + 's';
+        if (s < 3600) return Math.floor(s/60) + 'm ' + (s%60) + 's';
+        return Math.floor(s/3600) + 'h ' + Math.floor((s%3600)/60) + 'm';
+      };
+
+      const agents = Object.values(agentMap)
+        .filter(a => a.count > 0)
+        .map(a => ({
+          name: a.name,
+          count: a.count,
+          avgTma: a.tmaTotal ? fmtMs(Math.round(a.tmaTotal / a.count)) : null,
+          avgTme: a.tmeTotal ? fmtMs(Math.round(a.tmeTotal / a.count)) : null,
+        }))
+        .sort((a,b) => b.count - a.count);
+
+      // Debug: mostrar campos de uma sessão para entender estrutura
+      const sample = sessions[0] ? {
+        tme: sessions[0].tme,
+        tma: sessions[0].tma,
+        attendedAt: sessions[0].attendedAt,
+        createdAt: sessions[0].createdAt,
+        fields: Object.keys(sessions[0]).filter(k => k.includes('time') || k.includes('Time') || k.includes('tme') || k.includes('tma') || k.includes('response'))
+      } : null;
+
+      return res.status(200).json({ agents, totalSessions: sessions.length, sample });
+    }
+
     if (path === 'attendance') {
       // Tempo de atendimento — últimas 24h
       const since = new Date(Date.now() - 24 * 3600000).toISOString();

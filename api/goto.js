@@ -159,9 +159,36 @@ export default async function handler(req, res) {
         timeZone: 'America/Sao_Paulo'
       };
 
-      const url = `/contact-center-reports/v1/organizations/${ORG_ID}/dashboards/${DASH_ID}/data-sources/QUEUE_CALLER_SUMMARY/query`;
-      const data = await jivePost(url, body);
-      return res.status(200).json(data);
+      // Tenta vários endpoints com queue-caller.v1.read
+      const attempts = {};
+      
+      // Opção 1: queue-caller API direta
+      const r1 = await fetch(`https://api.goto.com/queue-caller/v1/queue-callers?accountKey=${ACCOUNT_KEY}&startTime=${startOfDay}&endTime=${now}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      attempts['queue-caller-v1'] = await r1.json().catch(() => ({ status: r1.status }));
+
+      // Opção 2: via jive com POST
+      const r2 = await fetch(`https://api.jive.com/contact-center-reports/v1/organizations/${ORG_ID}/dashboards/${DASH_ID}/data-sources/QUEUE_CALLER_SUMMARY/query`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      attempts['jive-post'] = await r2.json().catch(() => ({ status: r2.status }));
+
+      // Opção 3: queue-caller via jive
+      const r3 = await fetch(`https://api.jive.com/queue-caller/v1/queue-callers?accountKey=${ACCOUNT_KEY}&startTime=${startOfDay}&endTime=${now}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      attempts['jive-queue-caller'] = await r3.json().catch(() => ({ status: r3.status }));
+
+      // Opção 4: cr.v1 que também temos no escopo
+      const r4 = await fetch(`https://api.goto.com/cr/v1/accounts/${ACCOUNT_KEY}/reports?startTime=${startOfDay}&endTime=${now}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      attempts['cr-v1'] = await r4.json().catch(() => ({ status: r4.status }));
+
+      return res.status(200).json(attempts);
     }
 
     if (path === 'queue-status') {

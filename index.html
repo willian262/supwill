@@ -635,6 +635,15 @@
     if (tab === 'goto')  loadGoto();
   }
 
+  // Recarrega dados ao voltar para a aba (visibilidade da página)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      const activeTab = document.querySelector('.tab-btn.active')?.id;
+      if (activeTab === 'tabNeppo') loadNeppo();
+      if (activeTab === 'tabGoto')  loadGoto();
+    }
+  });
+
   async function loadData() {
   show('viewLoading');
     document.getElementById('btnRefresh').classList.add('spinning');
@@ -1342,8 +1351,13 @@
   // Neppo carrega separado com delay para não sobrecarregar
   setTimeout(() => {
     loadNeppo();
-    setInterval(loadNeppo, 120000); // atualiza a cada 2 minutos
-  }, 3000); // 5 minutos
+    setInterval(() => {
+      // Só atualiza se a aba WhatsApp estiver ativa
+      if (document.getElementById('tabPanelNeppo')?.classList.contains('active')) {
+        loadNeppo();
+      }
+    }, 120000);
+  }, 3000);
 </script>
 </body>
 </html>

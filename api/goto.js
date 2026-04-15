@@ -283,7 +283,7 @@ export default async function handler(req, res) {
         neppoAgentsFound: neppoAgentNames.length,
         _debug: {
           neppoNames: neppoAgentNames,
-          gotoNamesSample: allAgents.slice(0,10).map(a => a.name)
+          gotoAllNames: allAgents.map(a => a.name)
         }
       });
     }

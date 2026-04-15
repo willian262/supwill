@@ -119,17 +119,84 @@ export default async function handler(req, res) {
     if (path === 'queue-stats') {
       const ORG_ID = '6e9bbc00-5714-4f56-81e4-c1f12ebbf905';
 
-      // Testa com ontem para confirmar dados
-      const yesterday = new Date(Date.now() - 24*3600000 - 3*3600000).toISOString().slice(0,10);
-      const startYesterday = `${yesterday}T00:00:00Z`;
-      const endYesterday   = `${yesterday}T23:59:59Z`;
-
+      // Busca atividade de usuários hoje
       const r = await fetch(
-        `https://api.goto.com/call-reports/v1/reports/user-activity?organizationId=${ORG_ID}&startTime=${startYesterday}&endTime=${endYesterday}&pageSize=100`,
+        `https://api.goto.com/call-reports/v1/reports/user-activity?organizationId=${ORG_ID}&startTime=${startOfDay}&endTime=${now}&pageSize=200`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       const data = await r.json();
-      return res.status(200).json(data);
+      const items = data.items || [];
+
+      // Busca agentes SAC da Neppo para filtrar
+      let sacNames = [];
+      try {
+        const basicAuth = Buffer.from(`${process.env.NEPPO_CONSUMER_KEY}:${process.env.NEPPO_CONSUMER_SECRET}`).toString('base64');
+        const tokRes = await fetch('https://api-auth.neppo.com.br/oauth2/token', {
+          method: 'POST',
+          headers: { 'Authorization': `Basic ${basicAuth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ grant_type: 'password', username: process.env.NEPPO_USER, password: process.env.NEPPO_PASS })
+        });
+        const tokData = await tokRes.json();
+        const neppoToken = tokData.access_token || process.env.NEPPO_ACCESS_TOKEN;
+        const sessRes = await fetch('https://api.neppo.com.br/chatapi/1.0/api/user-session', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${neppoToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conditions: [{ key: 'groupConf.operation.operationName', value: 'Sac', operator: 'EQ', logic: 'AND' }, { key: 'status', value: 'CLOSED', operator: 'NEQ', logic: 'AND' }], sort: true, sortColumn: 'id', direction: 'DESC', page: 0, size: 200 })
+        });
+        const sessData = await sessRes.json();
+        const BOT_KW = ['bot', 'pesquisa', '@botserver', 'csat', 'nps', 'inatividade', 'inicial'];
+        const isBot = n => !n || BOT_KW.some(k => n.toLowerCase().includes(k));
+        const seen = new Set();
+        (sessData.results || []).forEach(s => {
+          const name = s.agent?.displayName;
+          if (name && !isBot(name) && !seen.has(name)) { seen.add(name); sacNames.push(name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')); }
+        });
+      } catch(e) {}
+
+      const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s*-\s*sac\s*$/i, '').trim();
+
+      const isSac = (gotoName) => {
+        if (!sacNames.length) return true;
+        const cleanGoto = norm(gotoName);
+        return sacNames.some(n => {
+          const parts = n.split(' ').filter(Boolean);
+          if (parts.length >= 2) return cleanGoto.includes(parts[0]) && cleanGoto.includes(parts[1]);
+          return cleanGoto.startsWith(parts[0]);
+        });
+      };
+
+      const fmtDur = ms => {
+        const s = Math.round(ms / 1000);
+        if (s < 60) return `${s}s`;
+        if (s < 3600) return `${Math.floor(s/60)}m ${s%60}s`;
+        return `${Math.floor(s/3600)}h ${Math.floor((s%3600)/60)}m`;
+      };
+
+      const sacAgents = items
+        .filter(u => isSac(u.userName))
+        .map(u => ({
+          name: u.userName.replace(/\s*-\s*Sac\s*$/i, '').trim(),
+          inbound: u.dataValues.inboundVolume || 0,
+          outbound: u.dataValues.outboundVolume || 0,
+          total: u.dataValues.volume || 0,
+          queueCalls: u.dataValues.inboundQueueVolume || 0,
+          avgDuration: u.dataValues.averageDuration ? fmtDur(u.dataValues.averageDuration) : '—',
+          totalDuration: u.dataValues.totalDuration ? fmtDur(u.dataValues.totalDuration) : '—'
+        }))
+        .sort((a, b) => b.total - a.total);
+
+      const totals = sacAgents.reduce((acc, a) => ({
+        inbound: acc.inbound + a.inbound,
+        outbound: acc.outbound + a.outbound,
+        total: acc.total + a.total,
+        queueCalls: acc.queueCalls + a.queueCalls
+      }), { inbound: 0, outbound: 0, total: 0, queueCalls: 0 });
+
+      return res.status(200).json({
+        ...totals,
+        agents: sacAgents,
+        sacNamesFound: sacNames.length
+      });
     }
 
     if (path === 'queue-status') {

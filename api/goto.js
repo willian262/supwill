@@ -117,54 +117,9 @@ export default async function handler(req, res) {
     }
 
     if (path === 'queue-stats') {
-      const ORG_ID  = '6e9bbc00-5714-4f56-81e4-c1f12ebbf905';
-      const DASH_ID = '8fd29c96-8a14-4e94-9a4c-28463f20cb64';
-      const BASE_JIVE = 'https://api.jive.com';
-
-      // Filas SAC — IDs e nomes
-      const SAC_QUEUES = [
-        { id: 'abee458c-f2a0-48a1-a2aa-4ffbc60783ff', name: 'SAC Processos' },
-        { id: 'c605723a-7456-4980-94da-b4e1a39bb5be', name: 'SAC Processos GD' },
-        { id: '633181e3-490f-4967-82ad-120e5bb92718', name: 'SAC Processos VE' },
-        { id: 'aeb9c333-9899-43aa-9226-60ccda96e94e', name: 'SAC Técnico' },
-        { id: 'b383c456-66f5-462f-a77b-ab20a075d02a', name: 'SAC Técnico Bombeamento' },
-        { id: '7fc41106-4cfb-4ab6-b69b-39d48a3682f0', name: 'SAC Técnico GD' },
-        { id: '9e08baa5-f1ad-4519-a785-e4680e2eb3b0', name: 'SAC Técnico VE' },
-      ];
-
-      const jivePost = async (path, body) => {
-        const r = await fetch(`${BASE_JIVE}${path}`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(body)
-        });
-        const t = await r.text();
-        try { return JSON.parse(t); } catch(e) { return { raw: t.slice(0,300) }; }
-      };
-
-      const body = {
-        filters: [{
-          type: 'FILTER',
-          property: 'queues',
-          format: null,
-          filterValues: SAC_QUEUES.map(q => ({ operator: 'equals', value: q.id }))
-        }],
-        timeDimension: {
-          dateRange: [startOfDay, now],
-          granularity: 'hour'
-        },
-        timeZone: 'America/Sao_Paulo'
-      };
-
-      // Tenta endpoints de queue-caller
-      const attempts = {};
-      
       const ORG_ID = '6e9bbc00-5714-4f56-81e4-c1f12ebbf905';
 
-      // Busca atividade de usuários (agentes SAC) hoje — escopo cr.v1.read
+      // Busca atividade de usuários hoje — escopo cr.v1.read
       const r = await fetch(
         `https://api.goto.com/call-reports/v1/reports/user-activity?organizationId=${ORG_ID}&startTime=${startOfDay}&endTime=${now}&pageSize=100`,
         { headers: { 'Authorization': `Bearer ${token}` } }

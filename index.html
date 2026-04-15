@@ -1216,8 +1216,7 @@
       const totalQueue    = stats.queueCalls|| 0;
       const totalCalls    = stats.total     || 0;
 
-      const totalTransfer = totalInbound - totalQueue;
-      const totalEntradas = totalInbound; // fila + transferências
+      const totalEntradas = totalQueue; // total recebidas = da fila (já corrigido pela API)
       const maxCalls = Math.max(...callAgents.map(a => a.total), 1);
 
       // Totais — separados em ENTRADAS e SAÍDAS

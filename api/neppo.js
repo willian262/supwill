@@ -89,9 +89,24 @@ export default async function handler(req, res) {
           sort: true, sortColumn: 'id', direction: 'DESC', page, size: 50
         }, token);
 
-        // Se retornou erro de autenticação, abortar
+        // Se retornou erro de autenticação, tentar renovar token
         if (data.fault || data.message || data.error) {
-          return res.status(200).json({ _tokenError: data.fault || data.message || data.error, totalConversations: 0, agents: [], totalAgents: 0, online: 0, paused: 0, offline: 0, waiting: 0, inQueue: 0, avgTme: null, avgTma: null, abertasHoje: 0, longestWaiting: [], groupQueue: [], groupTotal: [] });
+          if (page === 0) {
+            // Forçar renovação do token e tentar novamente
+            _neppoToken = null;
+            _neppoExpires = 0;
+            token = await getNeppoToken();
+            const retry = await neppoPost('/chatapi/1.0/api/user-session', {
+              conditions: SAC_CONDITIONS,
+              sort: true, sortColumn: 'id', direction: 'DESC', page: 0, size: 50
+            }, token);
+            const retryBatch = retry.results || [];
+            sac = sac.concat(retryBatch);
+            page = 1;
+            if (retryBatch.length < 50) break;
+            continue;
+          }
+          break;
         }
         const batch = data.results || [];
         if (batch.length === 0) break;

@@ -86,7 +86,7 @@ export default async function handler(req, res) {
       while (true) {
         const data = await neppoPost('/chatapi/1.0/api/user-session', {
           conditions: SAC_CONDITIONS,
-          sort: true, sortColumn: 'id', direction: 'DESC', page, size: 100
+          sort: true, sortColumn: 'id', direction: 'DESC', page, size: 50
         }, token);
         // Debug: verificar se retornou erro de autenticação
         if (data.message || data.error || data.fault) {
@@ -98,7 +98,8 @@ export default async function handler(req, res) {
         }
         const batch = data.results || [];
         sac = sac.concat(batch);
-        if (batch.length < 100) break;
+        // API Neppo retorna máximo 50 por página
+        if (batch.length < 50) break;
         page++;
         if (page > 20) break; // segurança
       }

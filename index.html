@@ -1222,7 +1222,7 @@
 
       // Totais — separados em ENTRADAS e SAÍDAS
       const totaisHtml = `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin-bottom:8px">
 
           <!-- Entradas -->
           <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px">
@@ -1240,22 +1240,21 @@
           </div>
 
           <!-- Saídas -->
-          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px">
+          <!-- Saídas -->
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;text-align:center">
             <div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Ligacoes Realizadas</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-              <div style="text-align:center">
-                <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--orange)">${totalOutbound}</div>
-                <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Saidas</div>
-              </div>
-              <div style="text-align:center">
-                <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--cyan);line-height:1.4">${stats.avgDuration || '—'}</div>
-                <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Duracao Media</div>
-              </div>
-            </div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:800;color:var(--orange)">${totalOutbound}</div>
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:2px">Saidas</div>
+          </div>
+
+          <!-- Duração média geral -->
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;text-align:center">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Duracao Media Geral</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--cyan)">${stats.avgDuration || '—'}</div>
+            <div style="font-size:9px;color:var(--muted);margin-top:4px">recebidas + realizadas</div>
           </div>
 
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:12px;padding:8px 4px;margin-bottom:4px">
           <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)">
             <div style="width:8px;height:8px;border-radius:2px;background:var(--yellow);flex-shrink:0"></div>
             <span><b style="color:var(--text)">Total</b> — todas as ligações do agente</span>

@@ -162,23 +162,15 @@ export default async function handler(req, res) {
       // Tenta endpoints de queue-caller
       const attempts = {};
       
-      const paths = [
-        `https://api.goto.com/queue-caller/v1/accounts/${ACCOUNT_KEY}/summaries?startTime=${startOfDay}&endTime=${now}`,
-        `https://api.goto.com/queue-caller/v1/reports?accountKey=${ACCOUNT_KEY}&startTime=${startOfDay}&endTime=${now}`,
-        `https://api.goto.com/queue-caller/v1/queues?accountKey=${ACCOUNT_KEY}&startTime=${startOfDay}&endTime=${now}`,
-        `https://api.goto.com/queue-caller/v1/queue-report?accountKey=${ACCOUNT_KEY}&startTime=${startOfDay}&endTime=${now}`,
-        `https://api.goto.com/cr/v1/queue-callers?accountKey=${ACCOUNT_KEY}&startTime=${startOfDay}&endTime=${now}`,
-        `https://api.goto.com/cr/v1/reports/queue-callers?accountKey=${ACCOUNT_KEY}&startTime=${startOfDay}&endTime=${now}`,
-      ];
+      const ORG_ID = '6e9bbc00-5714-4f56-81e4-c1f12ebbf905';
 
-      for (const url of paths) {
-        const r = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
-        const d = await r.json().catch(() => ({ httpStatus: r.status }));
-        const key = url.replace('https://api.goto.com/', '').split('?')[0];
-        attempts[key] = d?.errorCode || d?.httpStatus || JSON.stringify(d).slice(0,80);
-      }
-
-      return res.status(200).json(attempts);
+      // Busca atividade de usuários (agentes SAC) hoje — escopo cr.v1.read
+      const r = await fetch(
+        `https://api.goto.com/call-reports/v1/reports/user-activity?organizationId=${ORG_ID}&startTime=${startOfDay}&endTime=${now}&pageSize=100`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      const data = await r.json();
+      return res.status(200).json(data);
     }
 
     if (path === 'queue-status') {

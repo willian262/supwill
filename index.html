@@ -528,10 +528,10 @@
           <div style="display:flex;align-items:center;gap:16px">
             <div style="display:flex;align-items:center;gap:10px">
               <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)">
-                <div style="width:10px;height:10px;border-radius:2px;background:var(--yellow)"></div>Total
+                <div style="width:10px;height:10px;border-radius:2px;background:var(--green)"></div>Com Agente
               </div>
               <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)">
-                <div style="width:10px;height:10px;border-radius:2px;background:var(--green)"></div>Com Agente
+                <div style="width:10px;height:10px;border-radius:2px;background:var(--purple)"></div>Bot IA
               </div>
               <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)">
                 <div style="width:18px;height:2px;border-top:2px dashed var(--cyan)"></div>TME médio
@@ -542,9 +542,19 @@
               <button onclick="setNeppoHistPeriod(15)" id="neppoHistBtn15" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid rgba(255,255,255,0.07);background:transparent;color:#888580;cursor:pointer">15d</button>
               <button onclick="setNeppoHistPeriod(30)" id="neppoHistBtn30" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid rgba(255,208,76,0.2);background:rgba(255,208,76,0.12);color:#FFD04C;cursor:pointer">30d</button>
             </div>
-            <div style="display:flex;flex-direction:column;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 14px;min-width:90px">
-              <span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Total</span>
-              <span id="neppoHistTotal" style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;line-height:1.1;color:var(--yellow)">—</span>
+            <div style="display:flex;gap:8px">
+              <div style="display:flex;flex-direction:column;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 12px;min-width:70px">
+                <span style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Total</span>
+                <span id="neppoHistTotal" style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;line-height:1.1;color:var(--yellow)">—</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;background:var(--surface2);border:1px solid rgba(94,201,135,0.2);border-radius:8px;padding:4px 12px;min-width:70px">
+                <span style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--green)">Agente</span>
+                <span id="neppoHistAgente" style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;line-height:1.1;color:var(--green)">—</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;background:var(--surface2);border:1px solid rgba(167,139,250,0.2);border-radius:8px;padding:4px 12px;min-width:70px">
+                <span style="font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--purple)">Bot IA</span>
+                <span id="neppoHistBot" style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;line-height:1.1;color:var(--purple)">—</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1269,15 +1279,25 @@
 
   function renderNeppoHistChart(cache, n) {
     const { days, labels, total, humanas, avgTme } = cache;
-    const sl      = days.length;
-    const dSlice  = days.slice(sl - n);
-    const lSlice  = labels.slice(sl - n);
-    const tSlice  = total.slice(sl - n);
-    const hSlice  = humanas.slice(sl - n);
+    const sl       = days.length;
+    const lSlice   = labels.slice(sl - n);
+    const tSlice   = total.slice(sl - n);
+    const hSlice   = humanas.slice(sl - n);
+    const botSlice = tSlice.map((t, i) => t - hSlice[i]); // Bot IA = Total - Com Agente
     const tmeSlice = avgTme.slice(sl - n);
 
-    const totalSum = tSlice.reduce((a, b) => a + b, 0);
+    const totalSum   = tSlice.reduce((a, b) => a + b, 0);
+    const agenteSum  = hSlice.reduce((a, b) => a + b, 0);
+    const botSum     = botSlice.reduce((a, b) => a + b, 0);
+    const pctBot     = totalSum > 0 ? Math.round(botSum / totalSum * 100) : 0;
+
     document.getElementById('neppoHistTotal').textContent = totalSum;
+
+    // Atualizar badges de resumo se existirem
+    const badgeAgente = document.getElementById('neppoHistAgente');
+    const badgeBot    = document.getElementById('neppoHistBot');
+    if (badgeAgente) badgeAgente.textContent = agenteSum;
+    if (badgeBot)    badgeBot.textContent    = botSum + ' (' + pctBot + '%)';
 
     if (window._neppoHistChart) window._neppoHistChart.destroy();
     const ctx = document.getElementById('neppoHistChart');
@@ -1289,22 +1309,22 @@
         labels: lSlice,
         datasets: [
           {
-            label: 'Total',
-            data: tSlice,
-            backgroundColor: 'rgba(255,208,76,0.7)',
-            borderColor: '#FFD04C',
-            borderWidth: 1,
-            borderRadius: 3,
-            yAxisID: 'y'
-          },
-          {
             label: 'Com Agente',
             data: hSlice,
-            backgroundColor: 'rgba(94,201,135,0.7)',
+            backgroundColor: 'rgba(94,201,135,0.85)',
             borderColor: '#5ec987',
             borderWidth: 1,
+            borderRadius: 0,
+            stack: 'total'
+          },
+          {
+            label: 'Bot IA',
+            data: botSlice,
+            backgroundColor: 'rgba(167,139,250,0.75)',
+            borderColor: '#a78bfa',
+            borderWidth: 1,
             borderRadius: 3,
-            yAxisID: 'y'
+            stack: 'total'
           },
           {
             label: 'TME médio (s)',
@@ -1335,19 +1355,25 @@
             bodyColor: '#888580',
             callbacks: {
               afterBody: items => {
+                const ag  = items.find(i => i.dataset.label === 'Com Agente')?.parsed.y || 0;
+                const bot = items.find(i => i.dataset.label === 'Bot IA')?.parsed.y     || 0;
+                const tot = ag + bot;
                 const tme = items.find(i => i.dataset.label === 'TME médio (s)');
-                if (!tme || tme.parsed.y == null) return '';
-                const s = tme.parsed.y;
-                const fmt = s < 60 ? s + 's' : Math.floor(s/60) + 'm ' + (s%60) + 's';
-                return 'TME médio: ' + fmt;
+                const lines = [`Total: ${tot}`];
+                if (tme && tme.parsed.y != null) {
+                  const s = tme.parsed.y;
+                  lines.push('TME médio: ' + (s < 60 ? s + 's' : Math.floor(s/60) + 'm ' + (s%60) + 's'));
+                }
+                return lines;
               }
             },
             filter: item => item.dataset.label !== 'TME médio (s)'
           }
         },
         scales: {
-          x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#888580', font: { size: 10 } } },
+          x: { stacked: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#888580', font: { size: 10 } } },
           y: {
+            stacked: true,
             position: 'left',
             grid: { color: 'rgba(255,255,255,0.04)' },
             ticks: { color: '#888580', font: { size: 10 }, stepSize: 5 },

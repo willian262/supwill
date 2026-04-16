@@ -185,31 +185,30 @@ export default async function handler(req, res) {
         return new Date(new Date(s.createdAt).getTime() - 3*3600000).toISOString().slice(0,10) === todayBR;
       }).length;
 
-      // Buscar todos os agentes online da operação SAC para incluir quem não tem conversa
-      let allSacAgents = [];
+      // Buscar agentes online via endpoint /agent e cruzar com nomes SAC conhecidos
+      let allNeppoAgents = [];
       try {
-        const agentsData = await neppoPost('/chatapi/1.0/api/user-agent', {
-          conditions: [{ key: 'operationConfig.operation.operationName', value: 'Sac', operator: 'EQ', logic: 'AND' }],
-          sort: false, page: 0, size: 100
+        const agentsData = await neppoPost('/chatapi/1.0/api/agent', {
+          conditions: [], sort: false, page: 0, size: 200
         }, token);
         const BOT_KW2 = ['pesquisa','@botserver','csat','nps','inatividade','inicial','bot'];
-        allSacAgents = (agentsData.results || [])
+        allNeppoAgents = (agentsData.results || [])
           .filter(a => {
-            const n = (a.displayName||'').toLowerCase();
-            return !BOT_KW2.some(k => n.includes(k));
+            const n = (a.user?.displayName||'').toLowerCase();
+            return n && !BOT_KW2.some(k => n.includes(k));
           })
-          .map(a => ({
-            name: a.displayName,
-            status: a.status || 'OFFLINE'
-          }));
+          .map(a => ({ name: a.user?.displayName, status: a.status || 'OFFLINE' }));
       } catch(e) {}
 
-      // Mesclar: agentes com conversas + agentes sem conversa
+      // Nomes SAC conhecidos = quem apareceu em alguma sessão SAC
+      const sacNames = new Set(Object.keys(agentMap));
+
+      // Agentes Neppo que são do SAC (aparecem nas sessões) mas sem conversa agora
       const agentsWithConversations = Object.values(agentMap);
       const namesWithConversations = new Set(agentsWithConversations.map(a => a.name));
 
-      const agentsWithoutConversations = allSacAgents
-        .filter(a => a.name && !namesWithConversations.has(a.name) && !isBot(a.name))
+      const agentsWithoutConversations = allNeppoAgents
+        .filter(a => a.name && sacNames.has(a.name) && !namesWithConversations.has(a.name))
         .map(a => ({ name: a.name, status: a.status, conversations: 0, waiting: 0 }));
 
       const agents = [...agentsWithConversations, ...agentsWithoutConversations]
@@ -249,21 +248,7 @@ export default async function handler(req, res) {
       });
     }
 
-    if (path === 'test-agents') {
-      const data = await neppoPost('/chatapi/1.0/api/agent', {
-        conditions: [], sort: false, page: 0, size: 20
-      }, token);
-      return res.status(200).json({
-        total: data.results?.length,
-        error: data.message || data.fault || null,
-        sample: (data.results||[]).slice(0,5).map(a => ({
-          name: a.user?.displayName,
-          status: a.status,
-          operation: a.user?.operation?.operationName || a.user?.operation?.name,
-          operationObj: a.user?.operation
-        }))
-      });
-    }
+
 
     if (path === 'response-time') {
       // Tempo médio de resposta por agente — baseado nas sessões SAC ativas + fechadas hoje

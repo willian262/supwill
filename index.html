@@ -262,6 +262,9 @@
   <button class="tab-btn" onclick="switchTab('goto')" id="tabGoto">
     <div class="tab-dot"></div>Telefonia
   </button>
+  <button class="tab-btn" onclick="switchTab('exp')" id="tabExp" style="color:var(--cyan);border-bottom-color:transparent">
+    <div class="tab-dot"></div>⚗ Exp. SAT Processos
+  </button>
 </div>
 
 <!-- LOADING -->
@@ -697,6 +700,149 @@
 
   </div>
   </div><!-- fim tab Goto -->
+
+  <!-- ABA EXPERIMENTO SAT PROCESSOS -->
+  <div class="tab-panel" id="tabPanelExp">
+  <div class="dash">
+
+    <!-- HEADER DO EXPERIMENTO -->
+    <div class="card" style="border-top:2px solid var(--cyan)">
+      <div class="card-head">
+        <div>
+          <span class="card-title" style="color:var(--cyan)">⚗ Experimento — SAT Processos (Atendimento Técnico em 3 Fases)</span>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">Iniciado em <b style="color:var(--text)">10/02/2026</b> · Agentes: <b style="color:var(--text)">Vinicius &amp; Camila</b> · Escopo: OFF/Bombeamento</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div style="background:rgba(34,211,238,0.1);border:1px solid rgba(34,211,238,0.25);border-radius:6px;padding:4px 12px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;color:var(--cyan)" id="expDiasLabel">— dias</div>
+          <div style="font-size:10px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px" id="expUpdate">carregando...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPIs DO EXPERIMENTO -->
+    <div class="kpi-strip" style="grid-template-columns:repeat(5,1fr)">
+      <div class="kpi" style="--kpi-accent:var(--yellow)">
+        <div class="kpi-label">Técnicos Ativos</div>
+        <div class="kpi-value" id="expTecAtivos">—</div>
+        <div class="kpi-sub" id="expTecAtivosSub"></div>
+      </div>
+      <div class="kpi" style="--kpi-accent:var(--cyan)">
+        <div class="kpi-label">Com SAT Processos</div>
+        <div class="kpi-value" id="expComSATProc">—</div>
+        <div class="kpi-sub" id="expComSATProcSub"></div>
+      </div>
+      <div class="kpi" style="--kpi-accent:var(--green)">
+        <div class="kpi-label">Fechados (exp.)</div>
+        <div class="kpi-value" id="expFechados">—</div>
+        <div class="kpi-sub" id="expFechadosSub"></div>
+      </div>
+      <div class="kpi" style="--kpi-accent:var(--orange)">
+        <div class="kpi-label">TMA Médio</div>
+        <div class="kpi-value" id="expTMA" style="font-size:36px">—</div>
+        <div class="kpi-sub" id="expTMASub"></div>
+      </div>
+      <div class="kpi" style="--kpi-accent:var(--red)">
+        <div class="kpi-label">Parados +5 dias</div>
+        <div class="kpi-value" id="expParados5">—</div>
+        <div class="kpi-sub" id="expParados5Sub"></div>
+      </div>
+    </div>
+
+    <!-- GRÁFICO SEMANAL -->
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">📊 Tickets Técnicos por Semana — desde 10/02/2026</span>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)">
+            <div style="width:10px;height:10px;border-radius:2px;background:var(--yellow)"></div>Abertos
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)">
+            <div style="width:10px;height:10px;border-radius:2px;background:var(--green)"></div>Fechados
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)">
+            <div style="width:18px;height:2px;border-top:2px dashed var(--cyan)"></div>Saldo
+          </div>
+        </div>
+      </div>
+      <div style="padding:16px 18px">
+        <canvas id="expChart" height="70"></canvas>
+      </div>
+    </div>
+
+    <!-- LINHA: METAS + DISTRIBUIÇÃO -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+
+      <!-- METAS DO EXPERIMENTO -->
+      <div class="card">
+        <div class="card-head"><span class="card-title">🎯 Metas do Experimento</span></div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+
+          <!-- Meta 1: Backlog técnico caindo -->
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <div style="font-size:12px;color:var(--text)">Backlog técnico caindo semana a semana</div>
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700" id="expMeta1Badge">—</div>
+            </div>
+            <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+              <div id="expMeta1Bar" style="height:100%;border-radius:3px;transition:width .5s;background:var(--green);width:0%"></div>
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px" id="expMeta1Sub"></div>
+          </div>
+
+          <!-- Meta 2: TMA abaixo de 30 dias -->
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <div style="font-size:12px;color:var(--text)">TMA médio abaixo de 30 dias</div>
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700" id="expMeta2Badge">—</div>
+            </div>
+            <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+              <div id="expMeta2Bar" style="height:100%;border-radius:3px;transition:width .5s;width:0%"></div>
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px" id="expMeta2Sub"></div>
+          </div>
+
+          <!-- Meta 3: Parados -5 dias abaixo de 20% -->
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <div style="font-size:12px;color:var(--text)">Tickets parados +5 dias abaixo de 20%</div>
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700" id="expMeta3Badge">—</div>
+            </div>
+            <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+              <div id="expMeta3Bar" style="height:100%;border-radius:3px;transition:width .5s;width:0%"></div>
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px" id="expMeta3Sub"></div>
+          </div>
+
+          <!-- Meta 4: Saldo semanal positivo -->
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <div style="font-size:12px;color:var(--text)">Saldo semanal positivo (fechando mais do que abre)</div>
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700" id="expMeta4Badge">—</div>
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px" id="expMeta4Sub"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- DISTRIBUIÇÃO POR AGENTE -->
+      <div class="card">
+        <div class="card-head"><span class="card-title">👥 Tickets Técnicos Ativos por Agente</span></div>
+        <div class="agent-list" id="expAgentRows"></div>
+      </div>
+
+    </div>
+
+    <!-- VEREDICTO -->
+    <div class="card" id="expVeredictoCard">
+      <div class="card-head"><span class="card-title">⚖ Veredicto Atual</span></div>
+      <div style="padding:20px 18px" id="expVeredicto">
+        <div class="no-data">Calculando...</div>
+      </div>
+    </div>
+
+  </div>
+  </div><!-- fim tab Exp -->
 </div><!-- fim viewDash -->
 
 <script>
@@ -748,7 +894,7 @@
   }
 
   function switchTab(tab) {
-    ['zoho','neppo','goto'].forEach(t => {
+    ['zoho','neppo','goto','exp'].forEach(t => {
       const panel = document.getElementById('tabPanel' + t.charAt(0).toUpperCase() + t.slice(1));
       const btn   = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
       if (panel) panel.classList.toggle('active', t === tab);
@@ -756,6 +902,7 @@
     });
     if (tab === 'neppo') loadNeppo();
     if (tab === 'goto')  loadGoto();
+    if (tab === 'exp')   loadExp();
   }
 
   // Recarrega dados ao voltar para a aba (visibilidade da página)
@@ -779,6 +926,11 @@
     }
     if (activeTab === 'tabGoto') {
       await loadGoto().catch(() => {});
+      document.getElementById('btnRefresh').classList.remove('spinning');
+      return;
+    }
+    if (activeTab === 'tabExp') {
+      await loadExp().catch(() => {});
       document.getElementById('btnRefresh').classList.remove('spinning');
       return;
     }
@@ -1918,6 +2070,150 @@
     };
     renderList('hWarnList', filteredWarn, 'var(--orange)');
     renderList('hCritList', filteredCrit, 'var(--red)');
+  }
+
+  // ── Experimento SAT Processos ──
+  async function loadExp() {
+    document.getElementById('expUpdate').textContent = 'carregando...';
+
+    try {
+      const [allData, closedData, agentsData] = await Promise.all([
+        zoho('tickets', {}),
+        zoho('tickets', { mode: 'closed30' }),
+        zoho('agents',  { limit: 100 })
+      ]);
+
+      const all    = allData.data    || [];
+      const closed = closedData.data || [];
+
+      const agentNames = {};
+      (agentsData.data||[]).forEach(a => {
+        const fn=(a.firstName||'').trim(), ln=(a.lastName||'').trim();
+        agentNames[a.id] = fn?(ln?fn+' '+ln:fn):(a.name||'').trim()||a.id;
+      });
+
+      const TEAM_TEC  = ['Defeito em produto','Suporte Técnico'];
+      const EXP_START = new Date('2026-02-10T00:00:00-03:00').getTime();
+      const isTec     = t => TEAM_TEC.some(c => (t.classification||'').toLowerCase().includes(c.toLowerCase()));
+      const daysSince = d => d ? (Date.now() - new Date(d).getTime()) / 86400000 : 999;
+
+      const SAT_PROC_NAMES = ['vinicius','camila sakamoto'];
+      const SAT_PROC_IDS = Object.entries(agentNames)
+        .filter(([id,n]) => SAT_PROC_NAMES.some(s => n.toLowerCase().includes(s)))
+        .map(([id]) => id);
+
+      const tecAtivos  = all.filter(isTec);
+      const comSATProc = tecAtivos.filter(t => SAT_PROC_IDS.includes(t.assigneeId));
+      const parados5   = tecAtivos.filter(t => daysSince(t.modifiedTime) > 5);
+      const pct5       = tecAtivos.length ? Math.round(parados5.length / tecAtivos.length * 100) : 0;
+
+      const tecFechados = closed.filter(isTec).filter(t => {
+        const ref = t.closedTime || t.modifiedTime;
+        return ref && new Date(ref).getTime() >= EXP_START;
+      });
+
+      const tmaVals  = tecFechados.filter(t => t.closedTime && t.createdTime)
+        .map(t => (new Date(t.closedTime) - new Date(t.createdTime)) / 86400000);
+      const tmaMedia = tmaVals.length ? (tmaVals.reduce((a,b)=>a+b,0)/tmaVals.length) : null;
+      const diasExp  = Math.floor((Date.now() - EXP_START) / 86400000);
+
+      document.getElementById('expDiasLabel').textContent = diasExp + ' dias de experimento';
+      setEl('expTecAtivos',   tecAtivos.length);
+      setEl('expTecAtivosSub', tecAtivos.filter(t=>t.statusType==='Open').length + ' abertos · ' + tecAtivos.filter(t=>t.statusType==='On Hold').length + ' em espera');
+      setEl('expComSATProc',  comSATProc.length);
+      setEl('expComSATProcSub', SAT_PROC_IDS.map(id=>agentNames[id]).filter(Boolean).join(' · ') || 'Vinicius · Camila');
+      setEl('expFechados',    tecFechados.length);
+      setEl('expFechadosSub', (tecFechados.length / Math.max(diasExp/7,1)).toFixed(1) + '/semana');
+      setEl('expTMA',         tmaMedia ? Math.round(tmaMedia) + 'd' : '—');
+      setEl('expTMASub',      tmaMedia ? 'média desde 10/02' : '');
+      setEl('expParados5',    parados5.length, parados5.length > 0 ? 'danger' : 'ok');
+      setEl('expParados5Sub', pct5 + '% do total técnico', pct5 > 20 ? 'danger' : 'ok');
+
+      const sLabels=[],sAbertos=[],sFechados=[],sSaldo=[];
+      for (let i=0;i<12;i++) {
+        const ini=new Date(EXP_START+i*7*86400000);
+        const fim=new Date(EXP_START+(i+1)*7*86400000);
+        if (ini>Date.now()) break;
+        sLabels.push('S'+(i+1)+' '+ini.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
+        const ab=all.filter(isTec).filter(t=>t.createdTime&&new Date(t.createdTime)>=ini&&new Date(t.createdTime)<fim).length;
+        const fe=closed.filter(isTec).filter(t=>{const ref=t.closedTime||t.modifiedTime;return ref&&new Date(ref)>=ini&&new Date(ref)<fim;}).length;
+        sAbertos.push(ab);sFechados.push(fe);sSaldo.push(fe-ab);
+      }
+
+      if (window._expChart) window._expChart.destroy();
+      const ctx=document.getElementById('expChart');
+      if (ctx) {
+        window._expChart=new Chart(ctx.getContext('2d'),{
+          type:'bar',
+          data:{labels:sLabels,datasets:[
+            {label:'Abertos', data:sAbertos, backgroundColor:'rgba(255,208,76,0.7)', borderColor:'#FFD04C',borderWidth:1,borderRadius:3},
+            {label:'Fechados',data:sFechados,backgroundColor:'rgba(94,201,135,0.7)', borderColor:'#5ec987',borderWidth:1,borderRadius:3},
+            {label:'Saldo',   data:sSaldo,   type:'line',borderColor:'#22d3ee',borderWidth:2,borderDash:[4,4],pointRadius:3,pointBackgroundColor:'#22d3ee',fill:false,tension:0.3,yAxisID:'y2',spanGaps:true}
+          ]},
+          options:{responsive:true,interaction:{mode:'index',intersect:false},
+            plugins:{legend:{display:false},
+              tooltip:{backgroundColor:'#202020',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,titleColor:'#f0ede8',bodyColor:'#888580',
+                callbacks:{afterBody:items=>{const a=items.find(i=>i.dataset.label==='Abertos')?.parsed.y||0;const f=items.find(i=>i.dataset.label==='Fechados')?.parsed.y||0;return 'Saldo: '+(f-a>=0?'+':'')+(f-a);}},
+                filter:item=>item.dataset.label!=='Saldo'
+              }
+            },
+            scales:{
+              x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#888580',font:{size:10}}},
+              y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#888580',font:{size:10}},beginAtZero:true},
+              y2:{position:'right',grid:{drawOnChartArea:false},ticks:{color:'#22d3ee',font:{size:10},callback:v=>(v>=0?'+':'')+v},beginAtZero:false}
+            }
+          }
+        });
+      }
+
+      const totalSemanas=sSaldo.length;
+      const semanasPositivas=sSaldo.filter(s=>s>0).length;
+      const saldoAcum=sFechados.reduce((a,b)=>a+b,0)-sAbertos.reduce((a,b)=>a+b,0);
+      const tmaAtual=tmaMedia?Math.round(tmaMedia):999;
+      const meta1OK=saldoAcum>0, meta2OK=tmaAtual<=30, meta3OK=pct5<=20;
+      const ultimas2=sSaldo.slice(-2); const meta4OK=ultimas2.length>=2&&ultimas2.every(s=>s>0);
+
+      const setMeta=(id,ok,badge,bar,sub,pct,cor1,cor2)=>{
+        document.getElementById(id+'Badge').textContent=ok?'✅ Atingida':badge;
+        document.getElementById(id+'Badge').style.color=ok?'var(--green)':cor1;
+        document.getElementById(id+'Bar').style.width=pct+'%';
+        document.getElementById(id+'Bar').style.background=ok?'var(--green)':cor1;
+        document.getElementById(id+'Sub').textContent=sub;
+      };
+
+      setMeta('expMeta1',meta1OK,'⏳ Em progresso','','Saldo acumulado: '+(saldoAcum>=0?'+':'')+saldoAcum+' · '+semanasPositivas+'/'+totalSemanas+' semanas positivas',Math.min(100,Math.max(0,50+saldoAcum)),'var(--orange)','');
+      setMeta('expMeta2',meta2OK,'⏳ '+tmaAtual+'d (meta: 30d)','','TMA atual: '+tmaAtual+' dias — reduzir mais '+Math.max(0,tmaAtual-30)+'d para meta',Math.max(0,Math.min(100,Math.round((1-tmaAtual/60)*100))),tmaAtual<45?'var(--orange)':'var(--red)','');
+      setMeta('expMeta3',meta3OK,'⏳ '+pct5+'% (meta: ≤20%)','',parados5.length+' de '+tecAtivos.length+' tickets técnicos parados +5 dias',Math.min(100,Math.round((1-pct5/50)*100)),pct5<35?'var(--orange)':'var(--red)','');
+      document.getElementById('expMeta4Badge').textContent=meta4OK?'✅ Positivo':'⏳ '+ultimas2.map(s=>(s>=0?'+':'')+s).join(', ');
+      document.getElementById('expMeta4Badge').style.color=meta4OK?'var(--green)':'var(--orange)';
+      document.getElementById('expMeta4Sub').textContent='Últimas 2 semanas: '+sSaldo.slice(-2).map((s,i)=>'S'+(totalSemanas-1+i)+': '+(s>=0?'+':'')+s).join(' · ');
+
+      const porAgente={};
+      tecAtivos.forEach(t=>{const n=agentNames[t.assigneeId]||'Sem agente';if(!porAgente[n])porAgente[n]={total:0,parados5:0,isSATProc:SAT_PROC_IDS.includes(t.assigneeId)};porAgente[n].total++;if(daysSince(t.modifiedTime)>5)porAgente[n].parados5++;});
+      const agentList=Object.entries(porAgente).sort((a,b)=>b[1].total-a[1].total);
+      const maxA=Math.max(...agentList.map(([,v])=>v.total),1);
+      const PAL=[['#2a1f10','var(--yellow)'],['#0f1a20','var(--cyan)'],['#0f2018','var(--green)'],['#1f1010','var(--red)'],['#1e1525','var(--purple)'],['#201510','var(--orange)']];
+      document.getElementById('expAgentRows').innerHTML=agentList.map(([n,v],i)=>{
+        const [bg,fg]=PAL[i%PAL.length];
+        const init=n.split(' ').filter(Boolean).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+        const tag=v.isSATProc?`<span style="font-size:9px;background:rgba(34,211,238,0.15);color:var(--cyan);border:1px solid rgba(34,211,238,0.3);border-radius:3px;padding:1px 5px;margin-left:4px">SAT PROC</span>`:'';
+        const cls=v.parados5>5?'danger':v.parados5>0?'warn':'ok';
+        return `<div class="agent-row"><div class="avatar" style="background:${bg};color:${fg}">${init}</div><div><div class="agent-name">${n}${tag}</div><div class="agent-bar-wrap"><div class="agent-seg" style="width:${Math.round(v.total/maxA*100)}%;background:${fg}"></div></div><div class="agent-sub ${cls}">${v.parados5>0?'⚠ '+v.parados5+' parados +5d · ':''}${v.total} técnicos</div></div><div class="agent-total ${cls}">${v.total}</div></div>`;
+      }).join('')||'<div class="no-data">Sem dados</div>';
+
+      const metasOK=[meta1OK,meta2OK,meta3OK,meta4OK].filter(Boolean).length;
+      let html,cor;
+      if(metasOK>=3){cor='var(--green)';html=`<div style="display:flex;align-items:center;gap:16px"><div style="font-size:48px">✅</div><div><div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--green)">CONTINUAR — Experimento funcionando</div><div style="font-size:12px;color:var(--muted);margin-top:4px">${metasOK} de 4 metas atingidas · O SAT Processos está acelerando a resolução dos tickets técnicos</div></div></div>`;}
+      else if(metasOK>=2){cor='var(--orange)';html=`<div style="display:flex;align-items:center;gap:16px"><div style="font-size:48px">⏳</div><div><div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--orange)">AGUARDAR — Resultados parciais positivos</div><div style="font-size:12px;color:var(--muted);margin-top:4px">${metasOK} de 4 metas atingidas · Promissor mas precisa de mais tempo</div></div></div>`;}
+      else{cor='var(--red)';html=`<div style="display:flex;align-items:center;gap:16px"><div style="font-size:48px">⚠</div><div><div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--red)">REVISAR — Abaixo das expectativas</div><div style="font-size:12px;color:var(--muted);margin-top:4px">${metasOK} de 4 metas atingidas · Avaliar ajustes antes de continuar</div></div></div>`;}
+      document.getElementById('expVeredictoCard').style.borderTop='2px solid '+cor;
+      document.getElementById('expVeredicto').innerHTML=html;
+
+      document.getElementById('expUpdate').textContent='atualizado '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+
+    } catch(e) {
+      document.getElementById('expUpdate').textContent='erro ao carregar';
+    }
   }
 
   show('viewLoading');

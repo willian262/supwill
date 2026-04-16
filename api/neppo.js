@@ -251,8 +251,8 @@ export default async function handler(req, res) {
 
     if (path === 'test-agents') {
       const data = await neppoPost('/chatapi/1.0/api/user-agent', {
-        conditions: [{ key: 'operationConfig.operation.operationName', value: 'Sac', operator: 'EQ', logic: 'AND' }],
-        sort: false, page: 0, size: 100
+        conditions: [],
+        sort: false, page: 0, size: 10
       }, token);
       return res.status(200).json({ 
         total: data.results?.length,

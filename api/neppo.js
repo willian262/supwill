@@ -250,20 +250,19 @@ export default async function handler(req, res) {
     }
 
     if (path === 'test-agents') {
-      // Testar endpoint de agentes com status
-      const endpoints = ['agent', 'agent-session', 'user-session-agent', 'agent-status'];
-      const results = {};
-      for (const ep of endpoints) {
-        try {
-          const data = await neppoPost(`/chatapi/1.0/api/${ep}`, { conditions: [], sort: false, page: 0, size: 3 }, token);
-          results[ep] = { 
-            total: data.results?.length || 0,
-            error: data.message || data.fault || null,
-            keys: data.results?.[0] ? Object.keys(data.results[0]) : []
-          };
-        } catch(e) { results[ep] = { error: e.message }; }
-      }
-      return res.status(200).json(results);
+      const data = await neppoPost('/chatapi/1.0/api/agent', {
+        conditions: [], sort: false, page: 0, size: 20
+      }, token);
+      return res.status(200).json({
+        total: data.results?.length,
+        error: data.message || data.fault || null,
+        sample: (data.results||[]).slice(0,5).map(a => ({
+          name: a.user?.displayName || a.user?.login,
+          status: a.status,
+          department: a.department?.name,
+          userKeys: a.user ? Object.keys(a.user) : []
+        }))
+      });
     }
 
     if (path === 'response-time') {

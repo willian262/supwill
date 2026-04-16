@@ -756,10 +756,9 @@
   });
 
   async function loadData() {
-  show('viewLoading');
     document.getElementById('btnRefresh').classList.add('spinning');
 
-    // Se estiver numa aba específica, atualiza só ela
+    // Se estiver numa aba específica, atualiza só ela — sem esconder o dashboard
     const activeTab = document.querySelector('.tab-btn.active')?.id;
     if (activeTab === 'tabNeppo') {
       await loadNeppo().catch(() => {});
@@ -771,6 +770,9 @@
       document.getElementById('btnRefresh').classList.remove('spinning');
       return;
     }
+
+    // Só mostra loading para a aba Zoho (carregamento principal)
+    show('viewLoading');
 
     try {
       // Sequencial para não sobrecarregar o endpoint de token da Zoho

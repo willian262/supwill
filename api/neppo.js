@@ -217,7 +217,15 @@ export default async function handler(req, res) {
         })),
         groupQueue: Object.entries(groupQueue).sort((a,b)=>b[1]-a[1]).map(([g,c])=>({group:g,count:c})),
         groupTotal: Object.entries(groupTotal).sort((a,b)=>b[1].total-a[1].total).map(([g,v])=>({group:g,...v})),
-        agents
+        agents,
+        _sessions: sac.map(s => ({
+          status: s.status,
+          createdAt: s.createdAt,
+          attendedAt: s.attendedAt,
+          user: { displayName: s.user?.displayName || null, phone: s.user?.phone || null },
+          agent: { displayName: s.agent?.displayName || null },
+          groupConf: { name: s.groupConf?.name || null }
+        }))
       });
     }
 

@@ -312,6 +312,62 @@ export default async function handler(req, res) {
       return res.status(200).json(data);
     }
 
+    if (path === 'history-test') {
+      // Testa se a API aceita filtro por data em sessões fechadas (para histórico)
+      const results = {};
+
+      // Teste 1: Sessões CLOSED com createdAt AFTER (últimos 7 dias)
+      const since7d = new Date(Date.now() - 7 * 24 * 3600000).toISOString();
+      const t1 = await neppoPost('/chatapi/1.0/api/user-session', {
+        conditions: [
+          { key: 'groupConf.operation.operationName', value: 'Sac', operator: 'EQ', logic: 'AND' },
+          { key: 'status', value: 'CLOSED', operator: 'EQ', logic: 'AND' },
+          { key: 'createdAt', value: since7d, operator: 'AFTER', logic: 'AND' }
+        ],
+        sort: true, sortColumn: 'createdAt', direction: 'DESC', page: 0, size: 5
+      }, token);
+      results.closedAfter7d = { total: t1.size, count: (t1.results||[]).length, error: t1.message||t1.fault||null };
+
+      // Teste 2: Qualquer status SAC com createdAt AFTER (últimos 7 dias)
+      const t2 = await neppoPost('/chatapi/1.0/api/user-session', {
+        conditions: [
+          { key: 'groupConf.operation.operationName', value: 'Sac', operator: 'EQ', logic: 'AND' },
+          { key: 'createdAt', value: since7d, operator: 'AFTER', logic: 'AND' }
+        ],
+        sort: true, sortColumn: 'createdAt', direction: 'DESC', page: 0, size: 5
+      }, token);
+      results.anyStatusAfter7d = {
+        total: t2.size, count: (t2.results||[]).length, error: t2.message||t2.fault||null,
+        statusSample: (t2.results||[]).map(s => ({ status: s.status, createdAt: s.createdAt, id: s.id }))
+      };
+
+      // Teste 3: Últimos 30 dias
+      const since30d = new Date(Date.now() - 30 * 24 * 3600000).toISOString();
+      const t3 = await neppoPost('/chatapi/1.0/api/user-session', {
+        conditions: [
+          { key: 'groupConf.operation.operationName', value: 'Sac', operator: 'EQ', logic: 'AND' },
+          { key: 'createdAt', value: since30d, operator: 'AFTER', logic: 'AND' }
+        ],
+        sort: true, sortColumn: 'createdAt', direction: 'DESC', page: 0, size: 3
+      }, token);
+      results.anyStatus30d = {
+        total: t3.size, count: (t3.results||[]).length, error: t3.message||t3.fault||null
+      };
+
+      // Teste 4: Campos disponíveis numa sessão fechada
+      const t4 = await neppoPost('/chatapi/1.0/api/user-session', {
+        conditions: [
+          { key: 'groupConf.operation.operationName', value: 'Sac', operator: 'EQ', logic: 'AND' },
+          { key: 'status', value: 'CLOSED', operator: 'EQ', logic: 'AND' }
+        ],
+        sort: true, sortColumn: 'id', direction: 'DESC', page: 0, size: 1
+      }, token);
+      results.closedFields = t4.results?.[0] ? Object.keys(t4.results[0]) : [];
+      results.closedSample = t4.results?.[0] || null;
+
+      return res.status(200).json(results);
+    }
+
     if (path === 'debug') {
       // Debug: mais recentes primeiro, operação SAC
       const data = await neppoPost('/chatapi/1.0/api/user-session', {

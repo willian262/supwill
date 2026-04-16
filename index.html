@@ -46,6 +46,8 @@
     .btn-refresh { display:flex; align-items:center; gap:6px; background:var(--yellow-dim); border:1px solid var(--border-y); border-radius:6px; padding:7px 16px; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--yellow); cursor:pointer; transition:background .2s; }
     .btn-refresh:hover { background:rgba(255,208,76,.22); }
     .btn-refresh.spinning svg { animation:spin .7s linear infinite; }
+    .countdown { font-family:'Barlow Condensed',sans-serif; font-size:11px; letter-spacing:1.5px; color:var(--subtle); min-width:52px; text-align:right; transition:color .3s; }
+    .countdown.urgent { color:var(--yellow); }
     @keyframes spin { to{transform:rotate(360deg)} }
 
     /* ── ALERT ── */
@@ -231,6 +233,7 @@
   </div>
   <div class="topbar-right">
     <span class="last-update" id="lastUpdate">—</span>
+    <span class="countdown" id="countdown"></span>
     <button class="btn-refresh" id="btnRefresh" onclick="loadData()">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
         <path d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8"/><path d="M21 3v5h-5"/>
@@ -422,7 +425,15 @@
   <div class="card">
     <div class="card-head">
       <span class="card-title">Saúde da Operação — Tickets sem Movimentação</span>
-      <span class="card-badge danger" id="healthBadge">0 em alerta</span>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="display:flex;gap:4px" id="healthFilterBtns">
+          <button onclick="setHealthFilter('todos')"    id="hfTodos"    style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid rgba(255,208,76,0.2);background:rgba(255,208,76,0.12);color:#FFD04C;cursor:pointer">Todos</button>
+          <button onclick="setHealthFilter('processos')" id="hfProcessos" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid rgba(255,255,255,0.07);background:transparent;color:#888580;cursor:pointer">⚙ Processos</button>
+          <button onclick="setHealthFilter('tecnico')"  id="hfTecnico"  style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid rgba(255,255,255,0.07);background:transparent;color:#888580;cursor:pointer">🔧 Técnico</button>
+          <button onclick="setHealthFilter('ouvidoria')" id="hfOuvidoria" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid rgba(255,255,255,0.07);background:transparent;color:#888580;cursor:pointer">📢 Ouvidoria</button>
+        </div>
+        <span class="card-badge danger" id="healthBadge">0 em alerta</span>
+      </div>
     </div>
     <div class="health-grid">
       <!-- Amarelo: 3–5 dias -->
@@ -804,6 +815,7 @@
         'ATUALIZADO ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
       document.getElementById('liveBadge').classList.add('show');
       document.getElementById('tabsBar').style.display = 'flex';
+      startCountdown();
       show('viewDash');
 
 
@@ -912,28 +924,13 @@
     document.getElementById('healthBadge').className = 'card-badge ' + (parados5.length>0?'danger':parados3.length>0?'warn':'');
 
     setEl('hOkCount', okTickets.length);
-    setEl('hWarnCount', warnTickets.length);
-    setEl('hCritCount', critTickets.length);
 
-    const agentName = t => t.assigneeId&&agentNames[t.assigneeId] ? agentNames[t.assigneeId].split(' ')[0] : '—';
+    // Salvar tickets e nomes no cache global para o filtro por time
+    window._healthTickets    = { warn: warnTickets, crit: critTickets };
+    window._healthAgentNames = agentNames;
 
-    const renderHealthList = (id, tickets, color, showDays) => {
-      const el = document.getElementById(id);
-      if (!tickets.length) { el.innerHTML = '<div class="no-data" style="padding:8px 0;font-size:10px">nenhum</div>'; return; }
-      el.innerHTML = tickets.map(t => {
-        const days = daysSince(t.modifiedTime);
-        const daysLabel = days < 1 ? 'hoje' : `${Math.floor(days)}d`;
-        return `<div class="health-ticket" style="--indicator-color:${color}">
-          <div class="health-ticket-left">
-            <div class="health-ticket-num"><a href="https://suporte.neosolar.com.br/agent/neosolar215/sac/tickets/details/${t.id}" target="_blank" style="color:var(--yellow);text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">#${t.ticketNumber}</a> <span style="font-weight:400;color:var(--muted);font-size:10px">${agentName(t)}</span></div>
-            <div class="health-ticket-name" title="${t.subject||''}">${t.subject||'(sem assunto)'}</div>
-          </div>
-          <div class="health-ticket-days" style="color:${color}">${daysLabel}</div>
-        </div>`;
-      }).join('');
-    };
-    renderHealthList('hWarnList', warnTickets, 'var(--orange)', true);
-    renderHealthList('hCritList', critTickets, 'var(--red)',    true);
+    // Renderizar com o filtro ativo
+    applyHealthFilter();
 
     // ── Status distribution ──
     const sCnt = {};
@@ -1826,6 +1823,90 @@
     const resEl = document.getElementById('clienteBuscaResult');
     resEl.style.display = 'none';
     resEl.innerHTML = '';
+  }
+
+  // ── Contador regressivo ──
+  let _nextRefresh = 0;
+  let _countdownInterval = null;
+
+  function startCountdown() {
+    _nextRefresh = Date.now() + 300000; // 5 minutos
+    if (_countdownInterval) clearInterval(_countdownInterval);
+    _countdownInterval = setInterval(() => {
+      const remaining = Math.max(0, _nextRefresh - Date.now());
+      const el = document.getElementById('countdown');
+      if (!el) return;
+      if (remaining <= 0) {
+        el.textContent = '';
+        return;
+      }
+      const mins = Math.floor(remaining / 60000);
+      const secs = Math.floor((remaining % 60000) / 1000);
+      el.textContent = `⟳ ${mins}m ${String(secs).padStart(2,'0')}s`;
+      el.classList.toggle('urgent', remaining < 60000);
+    }, 1000);
+  }
+
+  // ── Filtro de time na Saúde da Operação ──
+  window._healthFilter  = 'todos';
+  window._healthTickets = { warn: [], crit: [] };
+  window._healthAgentNames = {};
+  const VICTOR_ID_HEALTH = '365059000020303001';
+  const TEAM_PROC_HEALTH  = ['Logística','Comercial','Financeiro'];
+  const TEAM_TEC_HEALTH   = ['Defeito em produto','Suporte Técnico'];
+
+  function setHealthFilter(filter) {
+    window._healthFilter = filter;
+    const activeStyle   = 'font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid rgba(255,208,76,0.2);background:rgba(255,208,76,0.12);color:#FFD04C;cursor:pointer';
+    const inactiveStyle = 'font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid rgba(255,255,255,0.07);background:transparent;color:#888580;cursor:pointer';
+    ['todos','processos','tecnico','ouvidoria'].forEach(f => {
+      const btn = document.getElementById('hf' + f.charAt(0).toUpperCase() + f.slice(1));
+      if (btn) btn.setAttribute('style', f === filter ? activeStyle : inactiveStyle);
+    });
+    applyHealthFilter();
+  }
+
+  function applyHealthFilter() {
+    const f    = window._healthFilter;
+    const warn = window._healthTickets.warn;
+    const crit = window._healthTickets.crit;
+    const names = window._healthAgentNames;
+
+    const matchFilter = t => {
+      if (f === 'todos') return true;
+      if (f === 'ouvidoria') return t.assigneeId === VICTOR_ID_HEALTH;
+      const cls = (t.classification||'').toLowerCase();
+      if (f === 'processos') return t.assigneeId !== VICTOR_ID_HEALTH && TEAM_PROC_HEALTH.some(c => cls.includes(c.toLowerCase()));
+      if (f === 'tecnico')   return t.assigneeId !== VICTOR_ID_HEALTH && TEAM_TEC_HEALTH.some(c => cls.includes(c.toLowerCase()));
+      return true;
+    };
+
+    const filteredWarn = warn.filter(matchFilter);
+    const filteredCrit = crit.filter(matchFilter);
+
+    setEl('hWarnCount', filteredWarn.length);
+    setEl('hCritCount', filteredCrit.length);
+
+    const agentName = t => t.assigneeId && names[t.assigneeId] ? names[t.assigneeId].split(' ')[0] : '—';
+
+    const renderList = (id, tickets, color) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (!tickets.length) { el.innerHTML = '<div class="no-data" style="padding:8px 0;font-size:10px">nenhum</div>'; return; }
+      el.innerHTML = tickets.map(t => {
+        const days = daysSince(t.modifiedTime);
+        const daysLabel = days < 1 ? 'hoje' : `${Math.floor(days)}d`;
+        return `<div class="health-ticket" style="--indicator-color:${color}">
+          <div class="health-ticket-left">
+            <div class="health-ticket-num"><a href="https://suporte.neosolar.com.br/agent/neosolar215/sac/tickets/details/${t.id}" target="_blank" style="color:var(--yellow);text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">#${t.ticketNumber}</a> <span style="font-weight:400;color:var(--muted);font-size:10px">${agentName(t)}</span></div>
+            <div class="health-ticket-name" title="${t.subject||''}">${t.subject||'(sem assunto)'}</div>
+          </div>
+          <div class="health-ticket-days" style="color:${color}">${daysLabel}</div>
+        </div>`;
+      }).join('');
+    };
+    renderList('hWarnList', filteredWarn, 'var(--orange)');
+    renderList('hCritList', filteredCrit, 'var(--red)');
   }
 
   show('viewLoading');

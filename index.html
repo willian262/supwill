@@ -489,37 +489,6 @@
     </div>
     <div style="padding:16px 18px;display:flex;flex-direction:column;gap:16px">
 
-      <!-- 🔍 BUSCA DE CLIENTE POR NÚMERO -->
-      <div style="background:var(--surface2);border:1px solid var(--border-y);border-radius:10px;padding:16px 18px">
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--yellow);margin-bottom:12px">🔍 Consultar Cliente por Número</div>
-        <div style="display:flex;gap:10px;align-items:center">
-          <input
-            id="clienteNumInput"
-            type="text"
-            placeholder="Ex: 11999998888 ou +5511999998888"
-            oninput="this.value=this.value.replace(/[^0-9+]/g,'')"
-            onkeydown="if(event.key==='Enter')buscarCliente()"
-            style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:9px 14px;font-family:'Barlow',sans-serif;font-size:13px;color:var(--text);outline:none;transition:border-color .2s"
-            onfocus="this.style.borderColor='rgba(255,208,76,0.5)'"
-            onblur="this.style.borderColor='rgba(255,255,255,0.07)'"
-          />
-          <button
-            onclick="buscarCliente()"
-            style="background:var(--yellow-dim);border:1px solid var(--border-y);border-radius:6px;padding:9px 20px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--yellow);cursor:pointer;white-space:nowrap;transition:background .2s"
-            onmouseover="this.style.background='rgba(255,208,76,0.22)'"
-            onmouseout="this.style.background='rgba(255,208,76,0.12)'"
-          >Buscar</button>
-          <button
-            onclick="limparBusca()"
-            title="Limpar"
-            style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--muted);cursor:pointer;transition:all .2s"
-            onmouseover="this.style.borderColor='rgba(255,255,255,0.2)';this.style.color='var(--text)'"
-            onmouseout="this.style.borderColor='rgba(255,255,255,0.07)';this.style.color='var(--muted)'"
-          >✕</button>
-        </div>
-        <div id="clienteBuscaResult" style="margin-top:12px;display:none"></div>
-      </div>
-
       <!-- KPIs Neppo — linha 1 -->
       <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:10px">
         <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--yellow);border-radius:7px;padding:12px 14px;text-align:center">
@@ -552,7 +521,13 @@
         </div>
       </div>
 
-      <!-- Linha 2: Agentes + Grupos lado a lado equilibrado -->
+      <!-- Linha 2: Clientes aguardando há mais tempo -->
+      <div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--yellow);margin-bottom:10px">⏳ Clientes Aguardando Há Mais Tempo</div>
+        <div id="neppoWaiting" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+
+      <!-- Linha 3: Agentes + Grupos lado a lado equilibrado -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
 
         <!-- Agentes -->
@@ -568,10 +543,35 @@
         </div>
       </div>
 
-      <!-- Linha 3: Clientes aguardando há mais tempo -->
-      <div>
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--yellow);margin-bottom:10px">⏳ Clientes Aguardando Há Mais Tempo</div>
-        <div id="neppoWaiting" style="display:flex;flex-direction:column;gap:6px"></div>
+      <!-- Linha 4: Busca de cliente por número -->
+      <div style="background:var(--surface2);border:1px solid var(--border-y);border-radius:10px;padding:16px 18px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--yellow);margin-bottom:12px">🔍 Consultar Cliente por Número</div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <input
+            id="clienteNumInput"
+            type="text"
+            placeholder="Ex: 11999998888 ou +5511999998888"
+            oninput="this.value=this.value.replace(/[^0-9+]/g,'')"
+            onkeydown="if(event.key==='Enter')buscarCliente()"
+            style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:9px 14px;font-family:'Barlow',sans-serif;font-size:13px;color:var(--text);outline:none;transition:border-color .2s"
+            onfocus="this.style.borderColor='rgba(255,208,76,0.5)'"
+            onblur="this.style.borderColor='rgba(255,255,255,0.07)'"
+          />
+          <button
+            onclick="buscarCliente()"
+            style="background:var(--yellow-dim);border:1px solid var(--border-y);border-radius:6px;padding:9px 20px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--yellow);cursor:pointer;white-space:nowrap;transition:background .2s"
+            onmouseover="this.style.background='rgba(255,208,76,0.22)'"
+            onmouseout="this.style.background='rgba(255,208,76,0.12)'"
+          >Buscar</button>
+          <button
+            onclick="limparBusca()"
+            title="Limpar"
+            style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--muted);cursor:pointer;transition:all .2s"
+            onmouseover="this.style.borderColor='rgba(255,255,255,0.2)';this.style.color='var(--text)'"
+            onmouseout="this.style.borderColor='rgba(255,255,255,0.07)';this.style.color='var(--muted)'"
+          >✕</button>
+        </div>
+        <div id="clienteBuscaResult" style="margin-top:12px;display:none"></div>
       </div>
 
     </div>

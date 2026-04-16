@@ -185,9 +185,37 @@ export default async function handler(req, res) {
         return new Date(new Date(s.createdAt).getTime() - 3*3600000).toISOString().slice(0,10) === todayBR;
       }).length;
 
-      const agents = Object.values(agentMap).sort((a,b) => b.conversations - a.conversations);
+      // Buscar todos os agentes online da operação SAC para incluir quem não tem conversa
+      let allSacAgents = [];
+      try {
+        const agentsData = await neppoPost('/chatapi/1.0/api/user-agent', {
+          conditions: [{ key: 'operationConfig.operation.operationName', value: 'Sac', operator: 'EQ', logic: 'AND' }],
+          sort: false, page: 0, size: 100
+        }, token);
+        const BOT_KW2 = ['pesquisa','@botserver','csat','nps','inatividade','inicial','bot'];
+        allSacAgents = (agentsData.results || [])
+          .filter(a => {
+            const n = (a.displayName||'').toLowerCase();
+            return !BOT_KW2.some(k => n.includes(k));
+          })
+          .map(a => ({
+            name: a.displayName,
+            status: a.status || 'OFFLINE'
+          }));
+      } catch(e) {}
 
-      // Contadores
+      // Mesclar: agentes com conversas + agentes sem conversa
+      const agentsWithConversations = Object.values(agentMap);
+      const namesWithConversations = new Set(agentsWithConversations.map(a => a.name));
+
+      const agentsWithoutConversations = allSacAgents
+        .filter(a => a.name && !namesWithConversations.has(a.name) && !isBot(a.name))
+        .map(a => ({ name: a.name, status: a.status, conversations: 0, waiting: 0 }));
+
+      const agents = [...agentsWithConversations, ...agentsWithoutConversations]
+        .sort((a,b) => b.conversations - a.conversations);
+
+      // Contadores (baseado em todos os agentes SAC)
       const online   = agents.filter(a => a.status === 'ONLINE').length;
       const paused   = agents.filter(a => !['ONLINE','OFFLINE'].includes(a.status)).length;
       const offline  = agents.filter(a => a.status === 'OFFLINE').length;

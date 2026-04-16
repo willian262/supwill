@@ -314,33 +314,41 @@ export default async function handler(req, res) {
 
     if (path === 'history') {
       // Histórico de conversas SAC dos últimos 30 dias
-      // Pagina por sessões CLOSED do mais recente ao mais antigo
-      const BOT_KW = ['pesquisa', '@botserver', 'csat', 'nps', 'inatividade', 'inicial', 'bot'];
-      const isBot  = n => !n || BOT_KW.some(k => (n||'').toLowerCase().includes(k));
-
+      // Busca em lotes paralelos de 5 páginas — ~5x mais rápido que sequencial
       const cutoff = Date.now() - 30 * 24 * 3600000;
+
+      const fetchPage = p => neppoPost('/chatapi/1.0/api/user-session', {
+        conditions: [
+          { key: 'groupConf.operation.operationName', value: 'Sac', operator: 'EQ', logic: 'AND' },
+          { key: 'status', value: 'CLOSED', operator: 'EQ', logic: 'AND' }
+        ],
+        sort: true, sortColumn: 'id', direction: 'DESC', page: p, size: 100
+      }, token);
+
       let closed = [];
       let page = 0;
-      let done = false;
+      const BATCH = 5;
 
-      while (!done && page < 40) {
-        const data = await neppoPost('/chatapi/1.0/api/user-session', {
-          conditions: [
-            { key: 'groupConf.operation.operationName', value: 'Sac', operator: 'EQ', logic: 'AND' },
-            { key: 'status', value: 'CLOSED', operator: 'EQ', logic: 'AND' }
-          ],
-          sort: true, sortColumn: 'id', direction: 'DESC', page, size: 100
-        }, token);
+      while (page < 60) {
+        const pages = Array.from({ length: BATCH }, (_, i) => page + i);
+        const results = await Promise.all(pages.map(p => fetchPage(p).catch(() => ({ results: [] }))));
 
-        const batch = data.results || [];
-        if (batch.length === 0) break;
+        let gotAny = false;
+        let hitCutoff = false;
 
-        for (const s of batch) {
-          const created = s.createdAt ? new Date(s.createdAt).getTime() : 0;
-          if (created < cutoff) { done = true; break; }
-          closed.push(s);
+        for (const data of results) {
+          const batch = data.results || [];
+          if (batch.length > 0) gotAny = true;
+          for (const s of batch) {
+            const created = s.createdAt ? new Date(s.createdAt).getTime() : 0;
+            if (created < cutoff) { hitCutoff = true; break; }
+            closed.push(s);
+          }
+          if (hitCutoff) break;
         }
-        page++;
+
+        if (!gotAny || hitCutoff) break;
+        page += BATCH;
       }
 
       const toBR = dt => new Date(new Date(dt).getTime() - 3 * 3600000).toISOString().slice(0, 10);

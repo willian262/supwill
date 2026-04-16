@@ -257,10 +257,10 @@ export default async function handler(req, res) {
         total: data.results?.length,
         error: data.message || data.fault || null,
         sample: (data.results||[]).slice(0,5).map(a => ({
-          name: a.user?.displayName || a.user?.login,
+          name: a.user?.displayName,
           status: a.status,
-          department: a.department?.name,
-          userKeys: a.user ? Object.keys(a.user) : []
+          operation: a.user?.operation?.operationName || a.user?.operation?.name,
+          operationObj: a.user?.operation
         }))
       });
     }

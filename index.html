@@ -489,6 +489,37 @@
     </div>
     <div style="padding:16px 18px;display:flex;flex-direction:column;gap:16px">
 
+      <!-- 🔍 BUSCA DE CLIENTE POR NÚMERO -->
+      <div style="background:var(--surface2);border:1px solid var(--border-y);border-radius:10px;padding:16px 18px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--yellow);margin-bottom:12px">🔍 Consultar Cliente por Número</div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <input
+            id="clienteNumInput"
+            type="text"
+            placeholder="Ex: 11999998888 ou +5511999998888"
+            oninput="this.value=this.value.replace(/[^0-9+]/g,'')"
+            onkeydown="if(event.key==='Enter')buscarCliente()"
+            style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:9px 14px;font-family:'Barlow',sans-serif;font-size:13px;color:var(--text);outline:none;transition:border-color .2s"
+            onfocus="this.style.borderColor='rgba(255,208,76,0.5)'"
+            onblur="this.style.borderColor='rgba(255,255,255,0.07)'"
+          />
+          <button
+            onclick="buscarCliente()"
+            style="background:var(--yellow-dim);border:1px solid var(--border-y);border-radius:6px;padding:9px 20px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--yellow);cursor:pointer;white-space:nowrap;transition:background .2s"
+            onmouseover="this.style.background='rgba(255,208,76,0.22)'"
+            onmouseout="this.style.background='rgba(255,208,76,0.12)'"
+          >Buscar</button>
+          <button
+            onclick="limparBusca()"
+            title="Limpar"
+            style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--muted);cursor:pointer;transition:all .2s"
+            onmouseover="this.style.borderColor='rgba(255,255,255,0.2)';this.style.color='var(--text)'"
+            onmouseout="this.style.borderColor='rgba(255,255,255,0.07)';this.style.color='var(--muted)'"
+          >✕</button>
+        </div>
+        <div id="clienteBuscaResult" style="margin-top:12px;display:none"></div>
+      </div>
+
       <!-- KPIs Neppo — linha 1 -->
       <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:10px">
         <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--yellow);border-radius:7px;padding:12px 14px;text-align:center">
@@ -1207,6 +1238,9 @@
     try {
       const data = await fetch('/api/neppo?path=dashboard').then(r=>r.json());
 
+      // Salvar sessões em cache para busca por número
+      if (data._sessions) window._neppoSessions = data._sessions;
+
       const agents = data.agents || [];
       const botSac  = agents.find(a => a.name === 'Bot SAC');
       const humans  = agents.filter(a => a.name !== 'Bot SAC');
@@ -1447,6 +1481,160 @@
     } catch(e) {
       document.getElementById('gotoUpdate').textContent = 'erro ao carregar';
     }
+  }
+
+  // ── Busca de cliente por número ──
+  // Cache das sessões Neppo para consulta offline
+  window._neppoSessions = [];
+
+  function normPhone(p) {
+    // Remove tudo que não for dígito
+    const digits = (p || '').replace(/\D/g, '');
+    // Remove prefixo 55 se tiver 13 dígitos (Brasil)
+    if (digits.length === 13 && digits.startsWith('55')) return digits.slice(2);
+    // Remove prefixo 0 de DDDs antigos (0xx)
+    if (digits.length === 11 && digits.startsWith('0')) return digits.slice(1);
+    return digits;
+  }
+
+  function buscarCliente() {
+    const raw = (document.getElementById('clienteNumInput').value || '').trim();
+    const resEl = document.getElementById('clienteBuscaResult');
+
+    if (!raw) {
+      resEl.style.display = 'block';
+      resEl.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:8px 0">Digite um número para buscar.</div>`;
+      return;
+    }
+
+    const query = normPhone(raw);
+    if (query.length < 8) {
+      resEl.style.display = 'block';
+      resEl.innerHTML = `<div style="font-size:12px;color:var(--orange);padding:8px 0">⚠ Número muito curto. Digite DDD + número.</div>`;
+      return;
+    }
+
+    resEl.style.display = 'block';
+    resEl.innerHTML = `<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);padding:6px 0"><div class="loader-ring" style="width:16px;height:16px;border-width:2px;margin:0"></div>Buscando...</div>`;
+
+    // Buscar nas sessões em cache; se vazio, recarregar Neppo
+    const sessions = window._neppoSessions || [];
+
+    if (sessions.length === 0) {
+      resEl.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:8px 0">⏳ Dados ainda carregando. Aguarde e tente novamente.</div>`;
+      return;
+    }
+
+    // Filtrar sessões que batem com o número
+    const matches = sessions.filter(s => {
+      const phone = normPhone(s.user?.phone || s.user?.displayName || '');
+      return phone.endsWith(query) || query.endsWith(phone.slice(-8));
+    });
+
+    if (matches.length === 0) {
+      resEl.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;background:rgba(136,133,128,0.08);border:1px solid var(--border);border-radius:8px;padding:12px 16px">
+          <span style="font-size:22px">🔍</span>
+          <div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--text)">Nenhuma conversa encontrada</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">O número <b style="color:var(--text)">${raw}</b> não possui atendimento ativo no momento.</div>
+          </div>
+        </div>`;
+      return;
+    }
+
+    const BOT_KW = ['pesquisa', '@botserver', 'csat', 'nps', 'inatividade', 'inicial'];
+    const isBot = n => !n || BOT_KW.some(k => (n || '').toLowerCase().includes(k));
+
+    const fmtTime = secs => {
+      if (!secs || secs < 0) return null;
+      if (secs < 60) return `${secs}s`;
+      if (secs < 3600) return `${Math.floor(secs / 60)}m ${secs % 60}s`;
+      return `${Math.floor(secs / 3600)}h ${Math.floor((secs % 3600) / 60)}m`;
+    };
+
+    const statusInfo = status => {
+      switch (status) {
+        case 'OPEN':    return { label: '● Em Atendimento', color: 'var(--green)',  icon: '💬' };
+        case 'WAITING': return { label: '⏳ Aguardando',    color: 'var(--orange)', icon: '⏳' };
+        case 'QUEUE':   return { label: '📋 Na Fila',       color: 'var(--cyan)',   icon: '📋' };
+        case 'BOT':     return { label: '🤖 Com Bot',       color: 'var(--purple)', icon: '🤖' };
+        case 'CLOSED':  return { label: '✓ Encerrado',      color: 'var(--muted)',  icon: '✓'  };
+        default:        return { label: status || 'Desconhecido', color: 'var(--muted)', icon: '?' };
+      }
+    };
+
+    const now = Date.now();
+
+    const cardsHtml = matches.map(s => {
+      const agentName = s.agent?.displayName || null;
+      const agentBot  = isBot(agentName);
+
+      // Determinar status real
+      let realStatus = s.status;
+      if (realStatus === 'OPEN' && agentBot) realStatus = 'BOT';
+
+      const si = statusInfo(realStatus);
+
+      const userName  = s.user?.displayName || s.user?.phone || raw;
+      const groupName = s.groupConf?.name   || '—';
+      const createdAt = s.createdAt ? new Date(s.createdAt) : null;
+      const waitMs    = (realStatus === 'WAITING' || realStatus === 'QUEUE') && s.createdAt
+        ? now - new Date(s.createdAt).getTime() : null;
+      const waitFmt   = waitMs ? fmtTime(Math.round(waitMs / 1000)) : null;
+
+      const waitColor = w => {
+        if (!w) return 'var(--muted)';
+        if (w.includes('h')) return 'var(--red)';
+        const mins = parseInt(w);
+        return mins > 30 ? 'var(--orange)' : 'var(--muted)';
+      };
+
+      return `
+        <div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid ${si.color};border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+          <!-- Linha 1: Nome + Status -->
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+            <div>
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:var(--text)">${userName}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">${s.user?.phone || raw}</div>
+            </div>
+            <div style="background:${si.color}1a;border:1px solid ${si.color}44;border-radius:20px;padding:4px 12px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;color:${si.color};white-space:nowrap">${si.label}</div>
+          </div>
+
+          <!-- Linha 2: Detalhes -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px">
+            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px">
+              <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px">Grupo</div>
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;color:var(--text)">${groupName}</div>
+            </div>
+            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px">
+              <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px">Agente</div>
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;color:${agentBot ? 'var(--purple)' : 'var(--text)'}">${agentBot ? '🤖 Bot' : (agentName ? agentName.split(' ')[0] : '— Sem agente')}</div>
+            </div>
+            ${createdAt ? `
+            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px">
+              <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px">Iniciou</div>
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;color:var(--text)">${createdAt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
+            </div>` : ''}
+            ${waitFmt ? `
+            <div style="background:var(--surface2);border:1px solid ${waitColor(waitFmt)}44;border-radius:6px;padding:8px 10px">
+              <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px">Aguardando há</div>
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:${waitColor(waitFmt)}">${waitFmt}</div>
+            </div>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+
+    resEl.innerHTML = `
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">${matches.length} conversa${matches.length > 1 ? 's' : ''} encontrada${matches.length > 1 ? 's' : ''} para <span style="color:var(--yellow)">${raw}</span></div>
+      <div style="display:flex;flex-direction:column;gap:8px">${cardsHtml}</div>`;
+  }
+
+  function limparBusca() {
+    document.getElementById('clienteNumInput').value = '';
+    const resEl = document.getElementById('clienteBuscaResult');
+    resEl.style.display = 'none';
+    resEl.innerHTML = '';
   }
 
   show('viewLoading');

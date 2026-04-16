@@ -367,7 +367,11 @@ export default async function handler(req, res) {
         const day = toBR(ref);
         if (total[day] === undefined) return;
         total[day]++;
-        if (!s.onlyBot && !isBot(s.agent?.displayName)) humanas[day]++;
+        // onlyBot === true  → nunca passou por humano (só bot)
+        // onlyBot === false → passou por humano em algum momento
+        // onlyBot === null  → campo ausente, checar attendedAt como fallback
+        const passouPorHumano = s.onlyBot === false || (s.onlyBot == null && !!s.attendedAt);
+        if (passouPorHumano) humanas[day]++;
         if (s.tme && s.tme > 0) { tmeSum[day] += s.tme; tmeCnt[day]++; }
         if (s.tma && s.tma > 0) { tmaSum[day] += s.tma; tmaCnt[day]++; }
       });

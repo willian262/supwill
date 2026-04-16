@@ -521,7 +521,40 @@
         </div>
       </div>
 
-      <!-- Linha 2: Clientes aguardando há mais tempo -->
+      <!-- Linha 2: Histórico 30 dias -->
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">📈 Histórico de Conversas — Últimos 30 dias</span>
+          <div style="display:flex;align-items:center;gap:16px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)">
+                <div style="width:10px;height:10px;border-radius:2px;background:var(--yellow)"></div>Total
+              </div>
+              <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)">
+                <div style="width:10px;height:10px;border-radius:2px;background:var(--green)"></div>Humanas
+              </div>
+              <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)">
+                <div style="width:18px;height:2px;border-top:2px dashed var(--cyan)"></div>TME médio
+              </div>
+            </div>
+            <div style="display:flex;gap:4px" id="neppoHistPeriodBtns">
+              <button onclick="setNeppoHistPeriod(7)"  id="neppoHistBtn7"  style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid rgba(255,255,255,0.07);background:transparent;color:#888580;cursor:pointer">7d</button>
+              <button onclick="setNeppoHistPeriod(15)" id="neppoHistBtn15" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid rgba(255,255,255,0.07);background:transparent;color:#888580;cursor:pointer">15d</button>
+              <button onclick="setNeppoHistPeriod(30)" id="neppoHistBtn30" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid rgba(255,208,76,0.2);background:rgba(255,208,76,0.12);color:#FFD04C;cursor:pointer">30d</button>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 14px;min-width:90px">
+              <span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">Total</span>
+              <span id="neppoHistTotal" style="font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;line-height:1.1;color:var(--yellow)">—</span>
+            </div>
+          </div>
+        </div>
+        <div style="padding:16px 18px">
+          <canvas id="neppoHistChart" height="60"></canvas>
+          <div id="neppoHistEmpty" class="no-data" style="display:none">Carregando histórico...</div>
+        </div>
+      </div>
+
+      <!-- Linha 3: Clientes aguardando há mais tempo -->
       <div>
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--yellow);margin-bottom:10px">⏳ Clientes Aguardando Há Mais Tempo</div>
         <div id="neppoWaiting" style="display:flex;flex-direction:column;gap:6px"></div>
@@ -1219,6 +1252,134 @@
   }
 
   // ── Neppo WhatsApp ──
+  // ── Histórico WhatsApp 30 dias ──
+  window._neppoHistPeriod = 30;
+  window._neppoHistCache  = null;
+
+  function setNeppoHistPeriod(days) {
+    window._neppoHistPeriod = days;
+    const activeStyle   = 'font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid rgba(255,208,76,0.2);background:rgba(255,208,76,0.12);color:#FFD04C;cursor:pointer';
+    const inactiveStyle = 'font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid rgba(255,255,255,0.07);background:transparent;color:#888580;cursor:pointer';
+    [7, 15, 30].forEach(d => {
+      const btn = document.getElementById('neppoHistBtn' + d);
+      if (btn) btn.setAttribute('style', d === days ? activeStyle : inactiveStyle);
+    });
+    if (window._neppoHistCache) renderNeppoHistChart(window._neppoHistCache, days);
+  }
+
+  function renderNeppoHistChart(cache, n) {
+    const { days, labels, total, humanas, avgTme } = cache;
+    const sl      = days.length;
+    const dSlice  = days.slice(sl - n);
+    const lSlice  = labels.slice(sl - n);
+    const tSlice  = total.slice(sl - n);
+    const hSlice  = humanas.slice(sl - n);
+    const tmeSlice = avgTme.slice(sl - n);
+
+    const totalSum = tSlice.reduce((a, b) => a + b, 0);
+    document.getElementById('neppoHistTotal').textContent = totalSum;
+
+    if (window._neppoHistChart) window._neppoHistChart.destroy();
+    const ctx = document.getElementById('neppoHistChart');
+    if (!ctx) return;
+
+    window._neppoHistChart = new Chart(ctx.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: lSlice,
+        datasets: [
+          {
+            label: 'Total',
+            data: tSlice,
+            backgroundColor: 'rgba(255,208,76,0.7)',
+            borderColor: '#FFD04C',
+            borderWidth: 1,
+            borderRadius: 3,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Humanas',
+            data: hSlice,
+            backgroundColor: 'rgba(94,201,135,0.7)',
+            borderColor: '#5ec987',
+            borderWidth: 1,
+            borderRadius: 3,
+            yAxisID: 'y'
+          },
+          {
+            label: 'TME médio (s)',
+            data: tmeSlice,
+            type: 'line',
+            borderColor: '#22d3ee',
+            borderWidth: 2,
+            borderDash: [4, 4],
+            pointRadius: 3,
+            pointBackgroundColor: '#22d3ee',
+            fill: false,
+            tension: 0.4,
+            yAxisID: 'y2',
+            spanGaps: true
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#202020',
+            borderColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1,
+            titleColor: '#f0ede8',
+            bodyColor: '#888580',
+            callbacks: {
+              afterBody: items => {
+                const tme = items.find(i => i.dataset.label === 'TME médio (s)');
+                if (!tme || tme.parsed.y == null) return '';
+                const s = tme.parsed.y;
+                const fmt = s < 60 ? s + 's' : Math.floor(s/60) + 'm ' + (s%60) + 's';
+                return 'TME médio: ' + fmt;
+              }
+            },
+            filter: item => item.dataset.label !== 'TME médio (s)'
+          }
+        },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#888580', font: { size: 10 } } },
+          y: {
+            position: 'left',
+            grid: { color: 'rgba(255,255,255,0.04)' },
+            ticks: { color: '#888580', font: { size: 10 }, stepSize: 5 },
+            beginAtZero: true
+          },
+          y2: {
+            position: 'right',
+            grid: { drawOnChartArea: false },
+            ticks: {
+              color: '#22d3ee',
+              font: { size: 10 },
+              callback: v => v < 60 ? v + 's' : Math.floor(v/60) + 'm'
+            },
+            beginAtZero: true
+          }
+        }
+      }
+    });
+  }
+
+  async function loadNeppoHistory() {
+    try {
+      document.getElementById('neppoHistEmpty').style.display = 'none';
+      const data = await fetch('/api/neppo?path=history').then(r => r.json());
+      window._neppoHistCache = data;
+      renderNeppoHistChart(data, window._neppoHistPeriod || 30);
+    } catch(e) {
+      const empty = document.getElementById('neppoHistEmpty');
+      if (empty) { empty.style.display = 'block'; empty.textContent = 'Erro ao carregar histórico'; }
+    }
+  }
+
   async function loadNeppo() {
     // Mostrar estado de carregando
     document.getElementById('neppoUpdate').textContent = 'carregando...';
@@ -1303,6 +1464,8 @@
     } catch(e) {
       document.getElementById('neppoUpdate').textContent = 'erro ao carregar';
     }
+    // Histórico em background — não bloqueia o painel
+    setTimeout(() => loadNeppoHistory().catch(() => {}), 1000);
   }
 
   // ── GoTo Telefonia ──

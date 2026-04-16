@@ -1731,8 +1731,10 @@
       return;
     }
 
-    const BOT_KW = ['pesquisa', '@botserver', 'csat', 'nps', 'inatividade', 'inicial'];
-    const isBot = n => !n || BOT_KW.some(k => (n || '').toLowerCase().includes(k));
+    const BOT_KW      = ['@botserver', 'bot sac', 'bot ia', 'inicial'];
+    const PESQUISA_KW = ['pesquisa', 'csat', 'nps', 'inatividade'];
+    const isBot      = n => !n || BOT_KW.some(k => (n||'').toLowerCase().includes(k));
+    const isPesquisa = n => n && PESQUISA_KW.some(k => (n||'').toLowerCase().includes(k));
 
     const fmtTime = secs => {
       if (!secs || secs < 0) return null;
@@ -1746,8 +1748,9 @@
         case 'OPEN':    return { label: '● Em Atendimento', color: 'var(--green)',  icon: '💬' };
         case 'WAITING': return { label: '⏳ Aguardando',    color: 'var(--orange)', icon: '⏳' };
         case 'QUEUE':   return { label: '📋 Na Fila',       color: 'var(--cyan)',   icon: '📋' };
-        case 'BOT':     return { label: '🤖 Com Bot',       color: 'var(--purple)', icon: '🤖' };
-        case 'CLOSED':  return { label: '✓ Encerrado',      color: 'var(--muted)',  icon: '✓'  };
+        case 'BOT':       return { label: '🤖 Com Bot',              color: 'var(--purple)', icon: '🤖' };
+        case 'PESQUISA':  return { label: '📋 Pesquisa de Satisfação', color: 'var(--cyan)', icon: '📋' };
+        case 'CLOSED':    return { label: '✓ Encerrado',             color: 'var(--muted)',  icon: '✓'  };
         default:        return { label: status || 'Desconhecido', color: 'var(--muted)', icon: '?' };
       }
     };
@@ -1758,9 +1761,14 @@
       const agentName = s.agent?.displayName || null;
       const agentBot  = isBot(agentName);
 
-      // Determinar status real
+      // Classificação refinada:
+      // - attendedAt preenchido + agente pesquisa → Pesquisa de Satisfação pós-atendimento
+      // - attendedAt nulo + agente bot → Bot IA (nunca chegou a humano)
       let realStatus = s.status;
-      if (realStatus === 'OPEN' && agentBot) realStatus = 'BOT';
+      if (realStatus === 'OPEN') {
+        if (isPesquisa(agentName) && s.attendedAt) realStatus = 'PESQUISA';
+        else if (isBot(agentName))                  realStatus = 'BOT';
+      }
 
       const si = statusInfo(realStatus);
 
@@ -1797,7 +1805,7 @@
             </div>
             <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px">
               <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px">Agente</div>
-              <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;color:${agentBot ? 'var(--purple)' : 'var(--text)'}">${agentBot ? '🤖 Bot' : (agentName ? agentName.split(' ')[0] : '— Sem agente')}</div>
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;color:${(realStatus==='BOT'||realStatus==='PESQUISA') ? 'var(--purple)' : 'var(--text)'}">${realStatus==='BOT' ? '🤖 Bot IA' : realStatus==='PESQUISA' ? '📋 Pesquisa' : (agentName ? agentName.split(' ')[0] : '— Sem agente')}</div>
             </div>
             ${createdAt ? `
             <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px">

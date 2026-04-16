@@ -249,6 +249,18 @@ export default async function handler(req, res) {
       });
     }
 
+    if (path === 'test-agents') {
+      const data = await neppoPost('/chatapi/1.0/api/user-agent', {
+        conditions: [{ key: 'operationConfig.operation.operationName', value: 'Sac', operator: 'EQ', logic: 'AND' }],
+        sort: false, page: 0, size: 100
+      }, token);
+      return res.status(200).json({ 
+        total: data.results?.length,
+        error: data.message || data.fault,
+        sample: (data.results||[]).slice(0,3).map(a => ({ name: a.displayName, status: a.status, keys: Object.keys(a) }))
+      });
+    }
+
     if (path === 'response-time') {
       // Tempo médio de resposta por agente — baseado nas sessões SAC ativas + fechadas hoje
       const todayStart = new Date();

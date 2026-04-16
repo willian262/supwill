@@ -185,36 +185,9 @@ export default async function handler(req, res) {
         return new Date(new Date(s.createdAt).getTime() - 3*3600000).toISOString().slice(0,10) === todayBR;
       }).length;
 
-      // Buscar agentes online via endpoint /agent e cruzar com nomes SAC conhecidos
-      let allNeppoAgents = [];
-      try {
-        const agentsData = await neppoPost('/chatapi/1.0/api/agent', {
-          conditions: [], sort: false, page: 0, size: 200
-        }, token);
-        const BOT_KW2 = ['pesquisa','@botserver','csat','nps','inatividade','inicial','bot'];
-        allNeppoAgents = (agentsData.results || [])
-          .filter(a => {
-            const n = (a.user?.displayName||'').toLowerCase();
-            return n && !BOT_KW2.some(k => n.includes(k));
-          })
-          .map(a => ({ name: a.user?.displayName, status: a.status || 'OFFLINE' }));
-      } catch(e) {}
+      const agents = Object.values(agentMap).sort((a,b) => b.conversations - a.conversations);
 
-      // Nomes SAC conhecidos = quem apareceu em alguma sessão SAC
-      const sacNames = new Set(Object.keys(agentMap));
-
-      // Agentes Neppo que são do SAC (aparecem nas sessões) mas sem conversa agora
-      const agentsWithConversations = Object.values(agentMap);
-      const namesWithConversations = new Set(agentsWithConversations.map(a => a.name));
-
-      const agentsWithoutConversations = allNeppoAgents
-        .filter(a => a.name && sacNames.has(a.name) && !namesWithConversations.has(a.name))
-        .map(a => ({ name: a.name, status: a.status, conversations: 0, waiting: 0 }));
-
-      const agents = [...agentsWithConversations, ...agentsWithoutConversations]
-        .sort((a,b) => b.conversations - a.conversations);
-
-      // Contadores (baseado em todos os agentes SAC)
+      // Contadores
       const online   = agents.filter(a => a.status === 'ONLINE').length;
       const paused   = agents.filter(a => !['ONLINE','OFFLINE'].includes(a.status)).length;
       const offline  = agents.filter(a => a.status === 'OFFLINE').length;
@@ -247,8 +220,6 @@ export default async function handler(req, res) {
         agents
       });
     }
-
-
 
     if (path === 'response-time') {
       // Tempo médio de resposta por agente — baseado nas sessões SAC ativas + fechadas hoje

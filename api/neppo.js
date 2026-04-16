@@ -312,6 +312,83 @@ export default async function handler(req, res) {
       return res.status(200).json(data);
     }
 
+    if (path === 'history') {
+      // Histórico de conversas SAC dos últimos 30 dias
+      // Pagina por sessões CLOSED do mais recente ao mais antigo
+      const BOT_KW = ['pesquisa', '@botserver', 'csat', 'nps', 'inatividade', 'inicial', 'bot'];
+      const isBot  = n => !n || BOT_KW.some(k => (n||'').toLowerCase().includes(k));
+
+      const cutoff = Date.now() - 30 * 24 * 3600000;
+      let closed = [];
+      let page = 0;
+      let done = false;
+
+      while (!done && page < 40) {
+        const data = await neppoPost('/chatapi/1.0/api/user-session', {
+          conditions: [
+            { key: 'groupConf.operation.operationName', value: 'Sac', operator: 'EQ', logic: 'AND' },
+            { key: 'status', value: 'CLOSED', operator: 'EQ', logic: 'AND' }
+          ],
+          sort: true, sortColumn: 'id', direction: 'DESC', page, size: 100
+        }, token);
+
+        const batch = data.results || [];
+        if (batch.length === 0) break;
+
+        for (const s of batch) {
+          const created = s.createdAt ? new Date(s.createdAt).getTime() : 0;
+          if (created < cutoff) { done = true; break; }
+          closed.push(s);
+        }
+        page++;
+      }
+
+      const toBR = dt => new Date(new Date(dt).getTime() - 3 * 3600000).toISOString().slice(0, 10);
+
+      const allDays = [];
+      const hoje = new Date();
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(hoje); d.setDate(hoje.getDate() - i);
+        allDays.push(new Date(d.getTime() - 3*3600000).toISOString().slice(0, 10));
+      }
+
+      const total   = {}; const humanas = {};
+      const tmeSum  = {}; const tmeCnt  = {};
+      const tmaSum  = {}; const tmaCnt  = {};
+      allDays.forEach(d => {
+        total[d] = 0; humanas[d] = 0;
+        tmeSum[d] = 0; tmeCnt[d] = 0;
+        tmaSum[d] = 0; tmaCnt[d] = 0;
+      });
+
+      closed.forEach(s => {
+        const ref = s.closedAt || s.updatedAt || s.createdAt;
+        if (!ref) return;
+        const day = toBR(ref);
+        if (total[day] === undefined) return;
+        total[day]++;
+        if (!s.onlyBot && !isBot(s.agent?.displayName)) humanas[day]++;
+        if (s.tme && s.tme > 0) { tmeSum[day] += s.tme; tmeCnt[day]++; }
+        if (s.tma && s.tma > 0) { tmaSum[day] += s.tma; tmaCnt[day]++; }
+      });
+
+      const labels = allDays.map(d => {
+        const dt = new Date(d + 'T12:00:00');
+        return dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      });
+
+      return res.status(200).json({
+        days: allDays,
+        labels,
+        total:   allDays.map(d => total[d]),
+        humanas: allDays.map(d => humanas[d]),
+        avgTme:  allDays.map(d => tmeCnt[d] > 0 ? Math.round(tmeSum[d] / tmeCnt[d] / 1000) : null),
+        avgTma:  allDays.map(d => tmaCnt[d] > 0 ? Math.round(tmaSum[d] / tmaCnt[d] / 1000) : null),
+        totalSessions: closed.length,
+        pagesScanned: page
+      });
+    }
+
     if (path === 'history-test') {
       // Testa se a API aceita filtro por data em sessões fechadas (para histórico)
       const results = {};

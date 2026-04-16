@@ -1762,12 +1762,14 @@
       const agentBot  = isBot(agentName);
 
       // Classificação refinada:
-      // - attendedAt preenchido + agente pesquisa → Pesquisa de Satisfação pós-atendimento
-      // - attendedAt nulo + agente bot → Bot IA (nunca chegou a humano)
+      // - agente contém "pesquisa/inatividade/csat/nps" → Pesquisa de Satisfação
+      //   (independe de attendedAt — admin pode encerrar direto do bot para pesquisa)
+      // - agente é bot genérico (Bot SAC, Inicial) → Bot IA
+      // - agente humano → Em Atendimento
       let realStatus = s.status;
       if (realStatus === 'OPEN') {
-        if (isPesquisa(agentName) && s.attendedAt) realStatus = 'PESQUISA';
-        else if (isBot(agentName))                  realStatus = 'BOT';
+        if (isPesquisa(agentName))   realStatus = 'PESQUISA';
+        else if (isBot(agentName))   realStatus = 'BOT';
       }
 
       const si = statusInfo(realStatus);

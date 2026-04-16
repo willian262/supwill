@@ -841,6 +841,45 @@
       </div>
     </div>
 
+    <!-- ANÁLISE DE AR -->
+    <div class="card" style="border-top:2px solid var(--orange)">
+      <div class="card-head">
+        <span class="card-title">📋 Análise de AR — Velocidade de Triagem Técnica</span>
+        <div style="font-size:11px;color:var(--muted)">Se o experimento funciona, técnicos devem analisar ARs mais rápido</div>
+      </div>
+      <div style="padding:16px 18px;display:flex;flex-direction:column;gap:16px">
+
+        <!-- KPIs de AR -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+          <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--orange);border-radius:7px;padding:12px 14px;text-align:center">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Análise de AR agora</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:800;color:var(--orange)" id="expARAnalise">—</div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--yellow);border-radius:7px;padding:12px 14px;text-align:center">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Aguardando AR agora</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:800;color:var(--yellow)" id="expARAguardando">—</div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--red);border-radius:7px;padding:12px 14px;text-align:center">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Parados +3d em Análise</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:800;color:var(--red)" id="expARParados">—</div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-top:2px solid var(--green);border-radius:7px;padding:12px 14px;text-align:center">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Tempo médio em Análise</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--green);line-height:1.3" id="expARTempo">—</div>
+          </div>
+        </div>
+
+        <!-- Lista dos tickets em Análise de AR -->
+        <div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--orange);margin-bottom:8px">Tickets em Análise de AR agora</div>
+          <div id="expARList" style="display:flex;flex-direction:column;gap:6px">
+            <div class="no-data">Carregando...</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
   </div>
   </div><!-- fim tab Exp -->
 </div><!-- fim viewDash -->
@@ -2102,6 +2141,18 @@
         .filter(([id,n]) => SAT_PROC_NAMES.some(s => n.toLowerCase().includes(s)))
         .map(([id]) => id);
 
+      // Buscar agentes extras (desativados/não listados) via página extra de agentes
+      const unknownIds = [...new Set(all.filter(isTec).map(t=>t.assigneeId).filter(id=>id&&!agentNames[id]))];
+      if (unknownIds.length > 0) {
+        try {
+          const pg2 = await zoho('agents', { limit: 100, from: 101 });
+          (pg2.data||[]).forEach(a => {
+            const fn=(a.firstName||'').trim(), ln=(a.lastName||'').trim();
+            agentNames[a.id] = fn?(ln?fn+' '+ln:fn):(a.name||'').trim()||a.id;
+          });
+        } catch(e) {}
+      }
+
       const tecAtivos  = all.filter(isTec);
       const comSATProc = tecAtivos.filter(t => SAT_PROC_IDS.includes(t.assigneeId));
       const parados5   = tecAtivos.filter(t => daysSince(t.modifiedTime) > 5);
@@ -2208,6 +2259,39 @@
       else{cor='var(--red)';html=`<div style="display:flex;align-items:center;gap:16px"><div style="font-size:48px">⚠</div><div><div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--red)">REVISAR — Abaixo das expectativas</div><div style="font-size:12px;color:var(--muted);margin-top:4px">${metasOK} de 4 metas atingidas · Avaliar ajustes antes de continuar</div></div></div>`;}
       document.getElementById('expVeredictoCard').style.borderTop='2px solid '+cor;
       document.getElementById('expVeredicto').innerHTML=html;
+
+      // ── Análise de AR ──
+      const emAnaliseAR    = all.filter(t => t.status === 'Análise de AR');
+      const aguardandoAR   = all.filter(t => t.status === 'Aguardando AR');
+      const paradosAR      = emAnaliseAR.filter(t => daysSince(t.modifiedTime) > 3);
+      const tempoAnalise   = emAnaliseAR.length
+        ? emAnaliseAR.reduce((s,t)=>s+daysSince(t.modifiedTime),0)/emAnaliseAR.length
+        : null;
+
+      setEl('expARAnalise',   emAnaliseAR.length,  emAnaliseAR.length > 5 ? 'warn' : '');
+      setEl('expARAguardando', aguardandoAR.length);
+      setEl('expARParados',   paradosAR.length,    paradosAR.length > 0 ? 'danger' : 'ok');
+      setEl('expARTempo',     tempoAnalise != null ? tempoAnalise.toFixed(1)+'d' : '—',
+            tempoAnalise > 3 ? 'warn' : 'ok');
+
+      const dayColor = d => d > 5 ? 'var(--red)' : d > 2 ? 'var(--orange)' : 'var(--muted)';
+      document.getElementById('expARList').innerHTML = emAnaliseAR.length === 0
+        ? '<div class="no-data" style="color:var(--green)">✅ Nenhum ticket em Análise de AR</div>'
+        : emAnaliseAR.sort((a,b)=>daysSince(b.modifiedTime)-daysSince(a.modifiedTime)).map(t => {
+            const dias = daysSince(t.modifiedTime);
+            const agName = agentNames[t.assigneeId] || 'Sem agente';
+            const dLabel = dias < 1 ? 'hoje' : Math.floor(dias)+'d sem mover';
+            return `<div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-left:3px solid ${dayColor(dias)};border-radius:6px;padding:8px 12px;gap:12px">
+              <div style="min-width:0">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <a href="https://suporte.neosolar.com.br/agent/neosolar215/sac/tickets/details/${t.id}" target="_blank" style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--yellow);text-decoration:none">#${t.ticketNumber}</a>
+                  <span style="font-size:11px;color:var(--muted)">${agName.split(' ')[0]}</span>
+                </div>
+                <div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:400px">${t.subject||'(sem assunto)'}</div>
+              </div>
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:${dayColor(dias)};white-space:nowrap">${dLabel}</div>
+            </div>`;
+          }).join('');
 
       document.getElementById('expUpdate').textContent='atualizado '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
 

@@ -795,7 +795,12 @@
 
   <!-- ABA EXPERIMENTO SAT PROCESSOS -->
   <div class="tab-panel" id="tabPanelExp">
-  <div class="dash">
+  <!-- Loading overlay do experimento -->
+  <div id="expLoadingOverlay" style="display:none;position:absolute;inset:0;background:rgba(17,17,17,0.85);z-index:50;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2" stroke-linecap="round" style="animation:spin 1s linear infinite"><path d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#22d3ee">Carregando dados...</div>
+  </div>
+  <div class="dash" id="expDash">
 
     <!-- HEADER DO EXPERIMENTO -->
     <div class="card" style="border-top:2px solid var(--cyan)">
@@ -1032,6 +1037,7 @@
     </div>
 
   </div>
+  </div><!-- fim expDash -->
   </div><!-- fim tab Exp -->
 </div><!-- fim viewDash -->
 
@@ -1134,6 +1140,9 @@
       const agentsData = await zoho('agents', { limit: 100 });
 
       const all = allData.data || [];
+      // Salvar globalmente para reuso no loadExp (evita chamadas duplicadas)
+      window._globalTickets  = all;
+      window._globalAgents   = agentsData.data || [];
 
       // Mapa agentes
       const agentNames = {};
@@ -2266,20 +2275,29 @@
   // ── Experimento SAT Processos ──
   async function loadExp() {
     document.getElementById('expUpdate').textContent = 'carregando...';
+    // Mostrar overlay enquanto carrega — evita ver números antigos
+    const overlay = document.getElementById('expLoadingOverlay');
+    if (overlay) overlay.style.display = 'flex';
 
     try {
-      // Usar cache para evitar números mudando a cada clique
-      // Só busca dados novos se cache expirou (5 min) ou não existe
-      let allData, closedData, agentsData;
+      // Reusar tickets e agentes já carregados pelo loadData — mesmos dados, sem chamada extra
+      const all = window._globalTickets || [];
+      
+      // Buscar agentes completos (loadData busca só 100, precisamos de 200+ para Vinicius)
+      let agentsData;
+      if (window._globalAgentsExp) {
+        agentsData = { data: window._globalAgentsExp };
+      } else {
+        const [ag1, ag2] = await Promise.all([
+          zoho('agents', { limit: 200 }),
+          zoho('agents', { limit: 200, from: 201 })
+        ]);
+        window._globalAgentsExp = [...(ag1.data||[]), ...(ag2.data||[])];
+        agentsData = { data: window._globalAgentsExp };
+      }
 
-      // Sem cache — sempre busca dados frescos
-      [allData, closedData, agentsData] = await Promise.all([
-        zoho('tickets', {}),
-        zoho('tickets', { mode: 'closed30', days: '70' }),
-        zoho('agents',  { limit: 200 })
-      ]);
-
-      const all    = allData.data    || [];
+      // Closed70 sempre busca fresco — é específico do experimento
+      const closedData = await zoho('tickets', { mode: 'closed30', days: '70' });
       const closed = closedData.data || [];
 
       const agentNames = {};
@@ -2289,11 +2307,7 @@
       });
       mapAgents(agentsData.data);
 
-      // Buscar página 2 de agentes (Vinicius Fonseca está além dos primeiros 200)
-      try {
-        const pg2 = await zoho('agents', { limit: 200, from: 201 });
-        mapAgents(pg2.data);
-      } catch(e) {}
+      // Agentes já carregados acima (ambas as páginas)
 
       const TEAM_TEC  = ['Defeito em produto','Suporte Técnico'];
       const EXP_START = new Date('2026-02-10T00:00:00-03:00').getTime();
@@ -2549,9 +2563,11 @@
             </div>`;
           }).join('');
 
+      if (overlay) overlay.style.display = 'none';
       document.getElementById('expUpdate').textContent='atualizado '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
 
     } catch(e) {
+      if (overlay) overlay.style.display = 'none';
       document.getElementById('expUpdate').textContent='erro ao carregar';
     }
   }

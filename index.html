@@ -722,7 +722,7 @@
     <!-- KPIs DO EXPERIMENTO -->
     <div class="kpi-strip" style="grid-template-columns:repeat(5,1fr)">
       <div class="kpi" style="--kpi-accent:var(--yellow)">
-        <div class="kpi-label">Técnicos Ativos</div>
+        <div class="kpi-label">SAT Processos Ativos</div>
         <div class="kpi-value" id="expTecAtivos">—</div>
         <div class="kpi-sub" id="expTecAtivosSub"></div>
       </div>
@@ -830,7 +830,7 @@
 
       <!-- DISTRIBUIÇÃO POR AGENTE -->
       <div class="card">
-        <div class="card-head"><span class="card-title">👥 Tickets Técnicos Ativos por Agente</span></div>
+        <div class="card-head"><span class="card-title">👥 Vinicius &amp; Camila — SAT Processos</span></div>
         <div class="agent-list" id="expAgentRows"></div>
       </div>
 
@@ -2126,7 +2126,9 @@
       const now = Date.now();
       let allData, closedData, agentsData;
 
-      if (window._expCache && (now - window._expCache.ts) < CACHE_TTL) {
+      // Cache robusto: só atualiza se expirou OU se virou da atualização global (F5/botão)
+      const cacheInvalid = !window._expCache || (now - window._expCache.ts) >= CACHE_TTL;
+      if (!cacheInvalid) {
         ({ allData, closedData, agentsData } = window._expCache);
       } else {
         [allData, closedData, agentsData] = await Promise.all([
@@ -2164,13 +2166,16 @@
       const VINI_AGENT_ID   = '365059000135165005'; // Vinicius Fonseca
       const CAMILA_AGENT_ID = '365059000127354039'; // Camila Sakamoto
 
+      // SAT Processos: todos tickets do team, independente de classificação
+      const comSATProc = all.filter(t => t.teamId === SAT_PROC_TEAM);
+      // Para parados/TMA usamos os tickets do SAT Processos
+      const parados5   = comSATProc.filter(t => daysSince(t.modifiedTime) > 5);
+      const pct5       = comSATProc.length ? Math.round(parados5.length / comSATProc.length * 100) : 0;
+      // Manter tecAtivos para a seção de Análise de AR (tickets técnicos gerais)
       const tecAtivos  = all.filter(isTec);
-      const comSATProc = tecAtivos.filter(t => t.teamId === SAT_PROC_TEAM);
-      const parados5   = tecAtivos.filter(t => daysSince(t.modifiedTime) > 5);
-      const pct5       = tecAtivos.length ? Math.round(parados5.length / tecAtivos.length * 100) : 0;
 
-      // Fechados no experimento = técnicos do team SAT Processos após início do experimento
-      const tecFechados = closed.filter(isTec).filter(t => {
+      // Fechados SAT Processos após início do experimento
+      const tecFechados = closed.filter(t => {
         const ref = t.closedTime || t.modifiedTime;
         return ref && new Date(ref).getTime() >= EXP_START && t.teamId === SAT_PROC_TEAM;
       });
@@ -2181,8 +2186,8 @@
       const diasExp  = Math.floor((Date.now() - EXP_START) / 86400000);
 
       document.getElementById('expDiasLabel').textContent = diasExp + ' dias de experimento';
-      setEl('expTecAtivos',   tecAtivos.length);
-      setEl('expTecAtivosSub', tecAtivos.filter(t=>t.statusType==='Open').length + ' abertos · ' + tecAtivos.filter(t=>t.statusType==='On Hold').length + ' em espera');
+      setEl('expTecAtivos',   comSATProc.length);
+      setEl('expTecAtivosSub', comSATProc.filter(t=>t.statusType==='Open').length + ' abertos · ' + comSATProc.filter(t=>t.statusType==='On Hold').length + ' em espera');
       const viniTec   = comSATProc.filter(t=>t.assigneeId===VINI_AGENT_ID).length;
       const camilaTec = comSATProc.filter(t=>t.assigneeId===CAMILA_AGENT_ID).length;
       const outrosTec = comSATProc.length - viniTec - camilaTec;
@@ -2201,10 +2206,10 @@
         const fim=new Date(EXP_START+(i+1)*7*86400000);
         if (ini>Date.now()) break;
         sLabels.push('S'+(i+1)+' '+ini.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
-        // Abertos: todos técnicos do SAT Processos criados na semana
-        const ab=all.filter(isTec).filter(t=>t.teamId===SAT_PROC_TEAM&&t.createdTime&&new Date(t.createdTime)>=ini&&new Date(t.createdTime)<fim).length;
-        // Fechados: técnicos do SAT Processos fechados na semana
-        const feTodos=closed.filter(isTec).filter(t=>{
+        // Abertos: todos SAT Processos criados na semana
+        const ab=all.filter(t=>t.teamId===SAT_PROC_TEAM&&t.createdTime&&new Date(t.createdTime)>=ini&&new Date(t.createdTime)<fim).length;
+        // Fechados: SAT Processos fechados na semana
+        const feTodos=closed.filter(t=>{
           const ref=t.closedTime||t.modifiedTime;
           return ref&&new Date(ref)>=ini&&new Date(ref)<fim&&t.teamId===SAT_PROC_TEAM;
         });
@@ -2245,6 +2250,7 @@
       const semanasPositivas=sSaldo.filter(s=>s>0).length;
       const saldoAcum=sFechados.reduce((a,b)=>a+b,0)-sAbertos.reduce((a,b)=>a+b,0);
       const tmaAtual=tmaMedia?Math.round(tmaMedia):999;
+      // pct5 já usa comSATProc como base
       const meta1OK=saldoAcum>0, meta2OK=tmaAtual<=30, meta3OK=pct5<=20;
       const ultimas2=sSaldo.slice(-2); const meta4OK=ultimas2.length>=2&&ultimas2.every(s=>s>0);
 
@@ -2258,23 +2264,27 @@
 
       setMeta('expMeta1',meta1OK,'⏳ Em progresso','','Saldo acumulado: '+(saldoAcum>=0?'+':'')+saldoAcum+' · '+semanasPositivas+'/'+totalSemanas+' semanas positivas',Math.min(100,Math.max(0,50+saldoAcum)),'var(--orange)','');
       setMeta('expMeta2',meta2OK,'⏳ '+tmaAtual+'d (meta: 30d)','','TMA atual: '+tmaAtual+' dias — reduzir mais '+Math.max(0,tmaAtual-30)+'d para meta',Math.max(0,Math.min(100,Math.round((1-tmaAtual/60)*100))),tmaAtual<45?'var(--orange)':'var(--red)','');
-      setMeta('expMeta3',meta3OK,'⏳ '+pct5+'% (meta: ≤20%)','',parados5.length+' de '+tecAtivos.length+' tickets técnicos parados +5 dias',Math.min(100,Math.round((1-pct5/50)*100)),pct5<35?'var(--orange)':'var(--red)','');
+      setMeta('expMeta3',meta3OK,'⏳ '+pct5+'% (meta: ≤20%)','',parados5.length+' de '+comSATProc.length+' tickets SAT Processos parados +5 dias',Math.min(100,Math.round((1-pct5/50)*100)),pct5<35?'var(--orange)':'var(--red)','');
       document.getElementById('expMeta4Badge').textContent=meta4OK?'✅ Positivo':'⏳ '+ultimas2.map(s=>(s>=0?'+':'')+s).join(', ');
       document.getElementById('expMeta4Badge').style.color=meta4OK?'var(--green)':'var(--orange)';
       document.getElementById('expMeta4Sub').textContent='Últimas 2 semanas: '+sSaldo.slice(-2).map((s,i)=>'S'+(totalSemanas-1+i)+': '+(s>=0?'+':'')+s).join(' · ');
 
-      const porAgente={};
-      tecAtivos.forEach(t=>{const n=agentNames[t.assigneeId]||'Sem agente';if(!porAgente[n])porAgente[n]={total:0,parados5:0,isSATProc:SAT_PROC_IDS.includes(t.assigneeId)};porAgente[n].total++;if(daysSince(t.modifiedTime)>5)porAgente[n].parados5++;});
-      const agentList=Object.entries(porAgente).sort((a,b)=>b[1].total-a[1].total);
-      const maxA=Math.max(...agentList.map(([,v])=>v.total),1);
-      const PAL=[['#2a1f10','var(--yellow)'],['#0f1a20','var(--cyan)'],['#0f2018','var(--green)'],['#1f1010','var(--red)'],['#1e1525','var(--purple)'],['#201510','var(--orange)']];
-      document.getElementById('expAgentRows').innerHTML=agentList.map(([n,v],i)=>{
-        const [bg,fg]=PAL[i%PAL.length];
-        const init=n.split(' ').filter(Boolean).map(w=>w[0]).slice(0,2).join('').toUpperCase();
-        const tag=v.isSATProc?`<span style="font-size:9px;background:rgba(34,211,238,0.15);color:var(--cyan);border:1px solid rgba(34,211,238,0.3);border-radius:3px;padding:1px 5px;margin-left:4px">SAT PROC</span>`:'';
-        const cls=v.parados5>5?'danger':v.parados5>0?'warn':'ok';
-        return `<div class="agent-row"><div class="avatar" style="background:${bg};color:${fg}">${init}</div><div><div class="agent-name">${n}${tag}</div><div class="agent-bar-wrap"><div class="agent-seg" style="width:${Math.round(v.total/maxA*100)}%;background:${fg}"></div></div><div class="agent-sub ${cls}">${v.parados5>0?'⚠ '+v.parados5+' parados +5d · ':''}${v.total} técnicos</div></div><div class="agent-total ${cls}">${v.total}</div></div>`;
-      }).join('')||'<div class="no-data">Sem dados</div>';
+      // Cards simples Vinicius + Camila
+      const mkAgent = (agentId, label, cor) => {
+        const tickets = comSATProc.filter(t=>t.assigneeId===agentId);
+        const par5 = tickets.filter(t=>daysSince(t.modifiedTime)>5).length;
+        const cls = par5>5?'danger':par5>0?'warn':'ok';
+        const init = label.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+        return '<div class="agent-row"><div class="avatar" style="background:'+cor+'22;color:'+cor+'">'+init+'</div><div><div class="agent-name">'+label+'</div><div class="agent-bar-wrap"><div class="agent-seg" style="width:'+(tickets.length?'100':'0')+'%;background:'+cor+'"></div></div><div class="agent-sub '+cls+'">'+(par5>0?'⚠ '+par5+' parados +5d · ':'')+tickets.length+' tickets</div></div><div class="agent-total '+cls+'">'+tickets.length+'</div></div>';
+      };
+      const viniNome = agentNames[VINI_AGENT_ID] || 'Vinicius Fonseca';
+      const camilaNome = agentNames[CAMILA_AGENT_ID] || 'Camila Sakamoto';
+      const outrosSATProc = comSATProc.filter(t=>t.assigneeId!==VINI_AGENT_ID&&t.assigneeId!==CAMILA_AGENT_ID).length;
+      document.getElementById('expAgentRows').innerHTML =
+        mkAgent(VINI_AGENT_ID, viniNome, 'var(--green)') +
+        mkAgent(CAMILA_AGENT_ID, camilaNome, 'var(--cyan)') +
+        (outrosSATProc>0 ? '<div class="agent-row"><div class="avatar" style="background:rgba(136,133,128,0.15);color:var(--muted)">?</div><div><div class="agent-name">Outros</div><div class="agent-sub">'+outrosSATProc+' tickets</div></div><div class="agent-total">'+outrosSATProc+'</div></div>' : '') ||
+        '<div class="no-data">Sem dados</div>';
 
       const metasOK=[meta1OK,meta2OK,meta3OK,meta4OK].filter(Boolean).length;
       let html,cor;

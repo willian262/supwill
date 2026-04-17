@@ -2577,15 +2577,18 @@
       const ultimas2Saldo  = sSaldo.slice(-2);
       const varBacklog     = ultimas2Saldo.length >= 2 ? ultimas2Saldo[ultimas2Saldo.length-1] : null;
       const q3ok = varBacklog !== null && varBacklog >= 0; // saldo >= 0 = fechando >= abrindo
-      const varLabel = varBacklog !== null ? (varBacklog >= 0 ? '+'+varBacklog+' (↑ crescendo)' : varBacklog+' (↓ reduzindo)') : '—';
-      const q3cor = q3ok ? 'var(--orange)' : 'var(--green)'; // verde = reduzindo = bom
-      // Barra: 100% = backlog estável ou reduzindo, menor = mais crescendo
+      // +N = backlog CRESCENDO (ruim = vermelho), -N = backlog REDUZINDO (bom = verde)
       const q3Pct = varBacklog !== null ? Math.max(0, Math.min(100, 50 - varBacklog*3)) : 0;
-      setQ('expQ3', q3ok && varBacklog === 0,
-        varBacklog !== null && varBacklog < 0 ? '✅ Reduzindo '+varBacklog : '⏳ '+varLabel,
+      const q3BadgeText = varBacklog === null ? '—'
+        : varBacklog > 0  ? '⚠ +'+varBacklog+' tickets (backlog crescendo)'
+        : varBacklog < 0  ? '✅ '+varBacklog+' tickets (backlog reduzindo)'
+        : '✅ Estável (saldo zero)';
+      const q3BadgeCor = varBacklog > 0 ? 'var(--red)' : varBacklog < 0 ? 'var(--green)' : 'var(--muted)';
+      setQ('expQ3', varBacklog !== null && varBacklog <= 0,
+        q3BadgeText,
         q3Pct,
-        'Backlog atual: '+backlogAtual+' tickets · Saldo desta semana: '+(varBacklog!==null?(varBacklog>=0?'+':'')+varBacklog:'N/D'),
-        varBacklog !== null && varBacklog > 0 ? 'var(--red)' : varBacklog !== null && varBacklog < 0 ? 'var(--green)' : 'var(--orange)');
+        'Backlog atual: '+backlogAtual+' tickets · Saldo desta semana: '+(varBacklog!==null?(varBacklog>0?'+':'')+varBacklog:'N/D')+' · meta: saldo ≤ 0',
+        q3BadgeCor);
 
       // Q4: Tempo médio em Análise de AR — meta: ≤1 dia
       const avgAR = avgAnalise ? Math.round(avgAnalise*10)/10 : null;

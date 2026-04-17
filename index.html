@@ -1126,7 +1126,8 @@
     const tOuv  = all.filter(t => t.assigneeId === VICTOR_ID);
     const tOuvIds = new Set(tOuv.map(t => t.id));
     const tProc = all.filter(t => !tOuvIds.has(t.id) && TEAM_PROC.some(cat => (t.classification||'').toLowerCase().includes(cat.toLowerCase())));
-    const tTec  = all.filter(t => !tOuvIds.has(t.id) && TEAM_TEC.some(cat => (t.classification||'').toLowerCase().includes(cat.toLowerCase())));
+    // tTec = todos os tickets técnicos por classificação, sem excluir nenhum team
+    const tTec  = all.filter(t => TEAM_TEC.some(cat => (t.classification||'').toLowerCase().includes(cat.toLowerCase())));
 
     const renderTeamStats = (id, tickets) => {
       const open    = tickets.filter(t => t.statusType === 'Open').length;

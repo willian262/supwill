@@ -813,13 +813,13 @@
             <!-- Q3: % SAT Processos do total técnico -->
             <div>
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
-                <div style="font-size:12px;color:var(--text)">% dos técnicos na fase SAT Processos</div>
+                <div style="font-size:12px;color:var(--text)">Variação do backlog (semana atual vs anterior)</div>
                 <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700" id="expQ3Badge">—</div>
               </div>
               <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
                 <div id="expQ3Bar" style="height:100%;border-radius:3px;transition:width .5s;width:0%"></div>
               </div>
-              <div style="font-size:10px;color:var(--muted);margin-top:3px" id="expQ3Sub">percentual do total técnico com team SAT Processos</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:3px" id="expQ3Sub">meta: backlog reduzindo semana a semana</div>
             </div>
 
             <!-- Q4: Velocidade Análise de AR -->
@@ -2346,12 +2346,20 @@
         fechPorSemana>=4?'var(--orange)':'var(--red)');
 
       // Q3: % SAT Processos do total técnico — meta: ≤40% (ideal: passando rápido)
-      const q3ok = pctSAT <= 40;
-      setQ('expQ3', q3ok,
-        '⏳ '+pctSAT+'% (meta: ≤40%)',
-        Math.min(100, Math.round((1-pctSAT/100)*100)),
-        comSATProc.length+' de '+tecAtivos.length+' técnicos no team SAT Processos agora',
-        pctSAT<=55?'var(--orange)':'var(--red)');
+      // Variação do backlog: semana atual vs anterior
+      const backlogAtual   = comSATProc.length; // tickets ativos agora no SAT Proc
+      const ultimas2Saldo  = sSaldo.slice(-2);
+      const varBacklog     = ultimas2Saldo.length >= 2 ? ultimas2Saldo[ultimas2Saldo.length-1] : null;
+      const q3ok = varBacklog !== null && varBacklog >= 0; // saldo >= 0 = fechando >= abrindo
+      const varLabel = varBacklog !== null ? (varBacklog >= 0 ? '+'+varBacklog+' (↑ crescendo)' : varBacklog+' (↓ reduzindo)') : '—';
+      const q3cor = q3ok ? 'var(--orange)' : 'var(--green)'; // verde = reduzindo = bom
+      // Barra: 100% = backlog estável ou reduzindo, menor = mais crescendo
+      const q3Pct = varBacklog !== null ? Math.max(0, Math.min(100, 50 - varBacklog*3)) : 0;
+      setQ('expQ3', q3ok && varBacklog === 0,
+        varBacklog !== null && varBacklog < 0 ? '✅ Reduzindo '+varBacklog : '⏳ '+varLabel,
+        q3Pct,
+        'Backlog atual: '+backlogAtual+' tickets · Saldo desta semana: '+(varBacklog!==null?(varBacklog>=0?'+':'')+varBacklog:'N/D'),
+        varBacklog !== null && varBacklog > 0 ? 'var(--red)' : varBacklog !== null && varBacklog < 0 ? 'var(--green)' : 'var(--orange)');
 
       // Q4: Tempo médio em Análise de AR — meta: ≤2 dias
       const avgAR = avgAnalise ? Math.round(avgAnalise*10)/10 : null;
@@ -2397,7 +2405,9 @@
       }).join('') || '<div class="no-data">Sem dados</div>';
 
       // ── Veredicto — baseado nas novas métricas ──
-      const qOK = [pctLt30>=40, fechPorSemana>=7, q3ok, avgAR!==null&&avgAR<=2].filter(Boolean).length;
+      // q3ok = backlog reduzindo (saldo negativo = bom); invertemos o sentido no veredicto
+      const q3positivo = varBacklog !== null && varBacklog <= 0;
+      const qOK = [pctLt30>=40, fechPorSemana>=7, q3positivo, avgAR!==null&&avgAR<=2].filter(Boolean).length;
 
       // Cards simples Vinicius + Camila
       const mkAgent = (agentId, label, cor) => {

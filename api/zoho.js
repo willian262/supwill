@@ -80,10 +80,17 @@ export default async function handler(req, res) {
     const CLOSED   = ['Fechado', 'Fechado Inatividade'];
     const LIMIT    = 100;
 
-    // Endpoint especial: busca tickets fechados dos últimos N dias (padrão 30, máx 90)
+    // Endpoint especial: busca tickets fechados desde uma data fixa ou últimos N dias
+    // Parâmetros: since=2026-01-01 (data fixa) OU days=30 (últimos N dias, padrão 30, máx 90)
     if (params.mode === 'closed30') {
-      const days = Math.min(parseInt(params.days || '30'), 90);
-      const since = new Date(Date.now() - days * 24 * 3600000).toISOString();
+      let since;
+      if (params.since) {
+        // Data fixa — nunca muda independente de quando for chamado
+        since = new Date(params.since + 'T00:00:00-03:00').toISOString();
+      } else {
+        const days = Math.min(parseInt(params.days || '30'), 90);
+        since = new Date(Date.now() - days * 24 * 3600000).toISOString();
+      }
       let closedTickets = [];
       let from = 1;
       while (from <= 3000) {

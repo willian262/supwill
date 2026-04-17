@@ -189,7 +189,7 @@ export default async function handler(req, res) {
 
       // Contadores
       const online   = agents.filter(a => a.status === 'ONLINE').length;
-      const paused   = agents.filter(a => !['ONLINE','OFFLINE'].includes(a.status)).length;
+      const paused   = agents.filter(a => a.status === 'FIRST_PAUSE').length;
       const offline  = agents.filter(a => a.status === 'OFFLINE').length;
       const waiting  = sac.filter(s => s.status === 'WAITING').length;
       const inQueue  = sac.filter(s => isBot(s.agent?.displayName)).length;

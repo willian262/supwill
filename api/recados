@@ -1,7 +1,7 @@
 // api/recados.js — Busca o recado do dia na planilha Google Sheets
-const SPREADSHEET_ID = '1tZGOKjOCJ4ichMCZMFVc-k6vvJzH7DM9lanvYYlKeS8';
-const SHEET_NAME     = 'Recados';
-const RANGE          = `${SHEET_NAME}!A3:B200`; // dados a partir da linha 3
+const SPREADSHEET_ID = '1gi5Xncd24q8cUwhG7-AxxY9ZRlO1CKBbSPPEen_ugT0';
+const SHEET_NAME     = 'Página1';
+const RANGE          = `${SHEET_NAME}!A2:B200`; // dados a partir da linha 2 (linha 1 é cabeçalho)
 
 // Gera JWT para autenticar com a Google API
 async function getAccessToken() {

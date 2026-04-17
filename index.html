@@ -2362,7 +2362,7 @@
       }
 
       // Closed70 sempre busca fresco — é específico do experimento
-      const closedData = await zoho('tickets', { mode: 'closed30', days: '70' });
+      const closedData = await zoho('tickets', { mode: 'closed30', since: '2026-01-01' });
       const closed = closedData.data || [];
 
       const agentNames = {};

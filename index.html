@@ -2270,22 +2270,14 @@
     try {
       // Usar cache para evitar números mudando a cada clique
       // Só busca dados novos se cache expirou (5 min) ou não existe
-      const CACHE_TTL = 5 * 60 * 1000;
-      const now = Date.now();
       let allData, closedData, agentsData;
 
-      // Cache robusto: só atualiza se expirou OU se virou da atualização global (F5/botão)
-      const cacheInvalid = !window._expCache || (now - window._expCache.ts) >= CACHE_TTL;
-      if (!cacheInvalid) {
-        ({ allData, closedData, agentsData } = window._expCache);
-      } else {
-        [allData, closedData, agentsData] = await Promise.all([
-          zoho('tickets', {}),
-          zoho('tickets', { mode: 'closed30', days: '70' }),
-          zoho('agents',  { limit: 200 })
-        ]);
-        window._expCache = { allData, closedData, agentsData, ts: now };
-      }
+      // Sem cache — sempre busca dados frescos
+      [allData, closedData, agentsData] = await Promise.all([
+        zoho('tickets', {}),
+        zoho('tickets', { mode: 'closed30', days: '70' }),
+        zoho('agents',  { limit: 200 })
+      ]);
 
       const all    = allData.data    || [];
       const closed = closedData.data || [];

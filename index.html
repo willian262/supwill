@@ -2189,7 +2189,7 @@
       } else {
         [allData, closedData, agentsData] = await Promise.all([
           zoho('tickets', {}),
-          zoho('tickets', { mode: 'closed30' }),
+          zoho('tickets', { mode: 'closed30', days: '70' }),
           zoho('agents',  { limit: 200 })
         ]);
         window._expCache = { allData, closedData, agentsData, ts: now };

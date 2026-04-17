@@ -1519,8 +1519,8 @@
     const mm7a = mm7(aData);
     const mm7f = mm7(fData);
     const crossovers = [];
-    const THRESHOLD_ANTES  = 2.0; // separação mínima antes do cruzamento
-    const THRESHOLD_DEPOIS = 1.0; // separação mínima depois do cruzamento
+    const THRESHOLD_ANTES  = 1.5; // separação mínima antes do cruzamento
+    const THRESHOLD_DEPOIS = 0.5; // separação mínima depois do cruzamento
     for (let i = 1; i < mm7a.length; i++) {
       const prevDiff = mm7f[i-1] - mm7a[i-1];
       const currDiff = mm7f[i]   - mm7a[i];
@@ -1535,7 +1535,7 @@
     // Plugin customizado — bandeira SVG no ponto de cruzamento
     const flagPlugin = {
       id: 'crossoverFlags',
-      afterDatasetsDraw(chart) {
+      afterDraw(chart) {
         const { ctx, scales: { x, y } } = chart;
         crossovers.forEach(({ i, fechandoMais }) => {
           const xPos = x.getPixelForValue(i);

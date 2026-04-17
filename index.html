@@ -1512,15 +1512,76 @@
     const saldoEl = document.getElementById('fluxoBadge');
     saldoEl.textContent = (saldo>=0?'+':'')+saldo;
     saldoEl.style.color = saldo >= 0 ? 'var(--green)' : 'var(--red)';
+
+    // Detectar cruzamentos das MM7
+    const mm7a = mm7(aData);
+    const mm7f = mm7(fData);
+    const crossovers = [];
+    for (let i = 1; i < mm7a.length; i++) {
+      const prevDiff = mm7f[i-1] - mm7a[i-1];
+      const currDiff = mm7f[i]   - mm7a[i];
+      if (prevDiff * currDiff < 0) { // sinal trocou = cruzamento
+        crossovers.push({ i, fechandoMais: currDiff > 0 });
+      }
+    }
+
+    // Plugin customizado para desenhar as flags
+    const flagPlugin = {
+      id: 'crossoverFlags',
+      afterDatasetsDraw(chart) {
+        const { ctx, scales: { x, y } } = chart;
+        crossovers.forEach(({ i, fechandoMais }) => {
+          const xPos  = x.getPixelForValue(i);
+          const yVal  = Math.max(mm7a[i], mm7f[i]);
+          const yPos  = y.getPixelForValue(yVal) - 10;
+          const cor   = fechandoMais ? '#5ec987' : '#e85c4a';
+          const emoji = fechandoMais ? '↓' : '↑';
+          const label = fechandoMais ? 'mais fechamentos' : 'mais aberturas';
+
+          // Linha vertical pontilhada
+          ctx.save();
+          ctx.setLineDash([3, 3]);
+          ctx.strokeStyle = cor + '66';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(xPos, y.getPixelForValue(0));
+          ctx.lineTo(xPos, yPos + 4);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // Flag
+          const flagW = 76, flagH = 18, flagR = 4;
+          const fx = Math.max(4, Math.min(chart.width - flagW - 4, xPos - flagW/2));
+          const fy = Math.max(4, yPos - flagH - 4);
+
+          ctx.fillStyle = cor + '22';
+          ctx.strokeStyle = cor + '99';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.roundRect(fx, fy, flagW, flagH, flagR);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = cor;
+          ctx.font = 'bold 9px Barlow Condensed, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(emoji + ' ' + label, fx + flagW/2, fy + flagH/2);
+          ctx.restore();
+        });
+      }
+    };
+
     if (window._fluxoChart) window._fluxoChart.destroy();
     const ctx = document.getElementById('fluxoChart').getContext('2d');
     window._fluxoChart = new Chart(ctx, {
       type: 'bar',
+      plugins: [flagPlugin],
       data: { labels, datasets: [
         { label: 'Abertos',      data: aData, backgroundColor: 'rgba(255,208,76,0.7)', borderColor: '#FFD04C', borderWidth: 1, borderRadius: 3 },
         { label: 'Fechados',     data: fData, backgroundColor: 'rgba(94,201,135,0.7)', borderColor: '#5ec987', borderWidth: 1, borderRadius: 3 },
-        { label: 'MM7 Abertos',  data: mm7(aData), type: 'line', borderColor: '#FFD04C', borderWidth: 2, borderDash: [4,4], pointRadius: 0, fill: false, tension: 0.4 },
-        { label: 'MM7 Fechados', data: mm7(fData), type: 'line', borderColor: '#5ec987', borderWidth: 2, borderDash: [4,4], pointRadius: 0, fill: false, tension: 0.4 },
+        { label: 'MM7 Abertos',  data: mm7a, type: 'line', borderColor: '#FFD04C', borderWidth: 2, borderDash: [4,4], pointRadius: 0, fill: false, tension: 0.4 },
+        { label: 'MM7 Fechados', data: mm7f, type: 'line', borderColor: '#5ec987', borderWidth: 2, borderDash: [4,4], pointRadius: 0, fill: false, tension: 0.4 },
       ]},
       options: { responsive: true, interaction: { mode: 'index', intersect: false },
         plugins: { legend: { display: false }, tooltip: { backgroundColor: '#202020', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, titleColor: '#f0ede8', bodyColor: '#888580',

@@ -529,6 +529,19 @@
           <button onclick="setHealthFilter('ouvidoria')" id="hfOuvidoria" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid rgba(255,255,255,0.07);background:transparent;color:#888580;cursor:pointer">📢 Ouvidoria</button>
         </div>
         <span class="card-badge danger" id="healthBadge">0 em alerta</span>
+        <!-- Filtro por agente -->
+        <div style="position:relative" id="agentFilterWrap">
+          <button onclick="toggleAgentFilter()" id="agentFilterBtn"
+            title="Filtrar por agente"
+            style="display:flex;align-items:center;gap:4px;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid rgba(255,255,255,0.07);background:transparent;color:#888580;cursor:pointer">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            <span id="agentFilterLabel">Agente</span>
+          </button>
+          <div id="agentFilterDropdown"
+            style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);border-radius:7px;min-width:170px;z-index:200;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.5)">
+            <div id="agentFilterList"></div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="health-grid">
@@ -2277,11 +2290,94 @@
 
   // ── Filtro de time na Saúde da Operação ──
   window._healthFilter  = 'todos';
+  window._healthAgentFilter = null; // null = todos agentes
   window._healthTickets = { warn: [], crit: [] };
   window._healthAgentNames = {};
   const VICTOR_ID_HEALTH = '365059000020303001';
   const TEAM_PROC_HEALTH  = ['Logística','Comercial','Financeiro'];
   const TEAM_TEC_HEALTH   = ['Defeito em produto','Suporte Técnico'];
+
+  function toggleAgentFilter() {
+    const dd = document.getElementById('agentFilterDropdown');
+    if (!dd) return;
+    const isOpen = dd.style.display !== 'none';
+    dd.style.display = isOpen ? 'none' : 'block';
+    if (!isOpen) buildAgentFilterList();
+  }
+
+  function buildAgentFilterList() {
+    const names  = window._healthAgentNames;
+    const warn   = window._healthTickets.warn;
+    const crit   = window._healthTickets.crit;
+    const all    = [...warn, ...crit];
+
+    // Agentes únicos nos tickets atuais (respeitando filtro de time)
+    const f = window._healthFilter;
+    const matchFilter = t => {
+      if (f === 'todos') return true;
+      if (f === 'ouvidoria') return t.assigneeId === VICTOR_ID_HEALTH;
+      const cls = (t.classification||'').toLowerCase();
+      if (f === 'processos') return t.assigneeId !== VICTOR_ID_HEALTH && TEAM_PROC_HEALTH.some(c=>cls.includes(c.toLowerCase()));
+      if (f === 'tecnico')   return t.assigneeId !== VICTOR_ID_HEALTH && TEAM_TEC_HEALTH.some(c=>cls.includes(c.toLowerCase()));
+      return true;
+    };
+
+    const agentCount = {};
+    all.filter(matchFilter).forEach(t => {
+      if (!t.assigneeId) return;
+      const n = names[t.assigneeId]?.split(' ')[0] || '—';
+      const id = t.assigneeId;
+      if (!agentCount[id]) agentCount[id] = { name: n, count: 0 };
+      agentCount[id].count++;
+    });
+
+    const agents = Object.entries(agentCount).sort((a,b)=>b[1].count-a[1].count);
+    const current = window._healthAgentFilter;
+
+    const rowStyle = (id) => `display:flex;justify-content:space-between;align-items:center;padding:8px 14px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;transition:background .15s;${current===id?'background:rgba(255,208,76,0.1);color:#FFD04C':'color:#f0ede8'}`;
+
+    document.getElementById('agentFilterList').innerHTML =
+      `<div onmouseenter="this.style.background='rgba(255,255,255,0.04)'" onmouseleave="this.style.background='${current===null?'rgba(255,208,76,0.1)':'transparent'}'" onclick="setAgentFilter(null)" style="${rowStyle(null)}">
+        <span>Todos os agentes</span>
+        <span style="color:var(--muted);font-size:11px">${all.filter(matchFilter).length}</span>
+      </div>
+      <div style="height:1px;background:rgba(255,255,255,0.06);margin:2px 0"></div>` +
+      agents.map(([id, {name, count}]) =>
+        `<div onmouseenter="this.style.background='rgba(255,255,255,0.04)'" onmouseleave="this.style.background='${current===id?'rgba(255,208,76,0.1)':'transparent'}'" onclick="setAgentFilter('${id}')" style="${rowStyle(id)}">
+          <span>${name}</span>
+          <span style="color:var(--muted);font-size:11px">${count}</span>
+        </div>`
+      ).join('');
+  }
+
+  function setAgentFilter(agentId) {
+    window._healthAgentFilter = agentId;
+    document.getElementById('agentFilterDropdown').style.display = 'none';
+    const names = window._healthAgentNames;
+    const btn   = document.getElementById('agentFilterBtn');
+    if (agentId) {
+      const name = names[agentId]?.split(' ')[0] || 'Agente';
+      btn.style.color  = '#FFD04C';
+      btn.style.borderColor = 'rgba(255,208,76,0.3)';
+      btn.style.background  = 'rgba(255,208,76,0.1)';
+      document.getElementById('agentFilterLabel').textContent = name;
+    } else {
+      btn.style.color  = '#888580';
+      btn.style.borderColor = 'rgba(255,255,255,0.07)';
+      btn.style.background  = 'transparent';
+      document.getElementById('agentFilterLabel').textContent = 'Agente';
+    }
+    applyHealthFilter();
+  }
+
+  // Fechar dropdown ao clicar fora
+  document.addEventListener('click', e => {
+    const wrap = document.getElementById('agentFilterWrap');
+    if (wrap && !wrap.contains(e.target)) {
+      const dd = document.getElementById('agentFilterDropdown');
+      if (dd) dd.style.display = 'none';
+    }
+  });
 
   function setHealthFilter(filter) {
     window._healthFilter = filter;
@@ -2309,8 +2405,8 @@
       return true;
     };
 
-    const filteredWarn = warn.filter(matchFilter);
-    const filteredCrit = crit.filter(matchFilter);
+    const filteredWarn = warn.filter(t => matchFilter(t) && (!window._healthAgentFilter || t.assigneeId === window._healthAgentFilter));
+    const filteredCrit = crit.filter(t => matchFilter(t) && (!window._healthAgentFilter || t.assigneeId === window._healthAgentFilter));
 
     setEl('hWarnCount', filteredWarn.length);
     setEl('hCritCount', filteredCrit.length);

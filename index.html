@@ -817,6 +817,71 @@
     </div>
 
     <!-- KPIs DO EXPERIMENTO -->
+    <!-- COMPARATIVO ANTES vs DEPOIS -->
+    <div class="card" style="border-top:2px solid var(--purple)">
+      <div class="card-head">
+        <span class="card-title">📈 Antes vs Depois do Experimento — Tickets Técnicos</span>
+        <span style="font-size:10px;color:var(--muted)" id="expComparativoSub">desde 10/02/2026</span>
+      </div>
+      <div style="padding:14px 18px">
+        <div style="display:grid;grid-template-columns:1fr 1px 1fr;gap:0;align-items:stretch">
+
+          <!-- ANTES -->
+          <div style="padding-right:24px">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Antes do experimento</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline">
+                <div style="font-size:12px;color:var(--muted)">Fechamentos/semana</div>
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text)" id="expAvantFechSem">—</div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline">
+                <div style="font-size:12px;color:var(--muted)">TMA médio</div>
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text)" id="expAvantTMA">—</div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline">
+                <div style="font-size:12px;color:var(--muted)">Tickets parados +5d</div>
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text)" id="expAvantParados">—</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- DIVISOR -->
+          <div style="background:var(--border);width:1px"></div>
+
+          <!-- DEPOIS -->
+          <div style="padding-left:24px">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--cyan);margin-bottom:12px">Com SAT Processos</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline">
+                <div style="font-size:12px;color:var(--muted)">Fechamentos/semana</div>
+                <div style="display:flex;align-items:baseline;gap:8px">
+                  <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text)" id="expDepoisFechSem">—</div>
+                  <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700" id="expDeltaFechSem"></div>
+                </div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline">
+                <div style="font-size:12px;color:var(--muted)">TMA médio</div>
+                <div style="display:flex;align-items:baseline;gap:8px">
+                  <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text)" id="expDepoisTMA">—</div>
+                  <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700" id="expDeltaTMA"></div>
+                </div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline">
+                <div style="font-size:12px;color:var(--muted)">Tickets parados +5d</div>
+                <div style="display:flex;align-items:baseline;gap:8px">
+                  <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text)" id="expDepoisParados">—</div>
+                  <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700" id="expDeltaParados"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <!-- Aviso de limitação dos dados -->
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)" id="expComparativoAviso"></div>
+      </div>
+    </div>
+
     <div class="kpi-strip" style="grid-template-columns:repeat(5,1fr)">
       <div class="kpi" style="--kpi-accent:var(--yellow)">
         <div class="kpi-label">Tickets Técnicos Ativos</div>
@@ -2340,6 +2405,57 @@
       const diasExp  = Math.floor((Date.now() - EXP_START) / 86400000);
 
       document.getElementById('expDiasLabel').textContent = diasExp + ' dias de experimento';
+
+      // ── Comparativo Antes vs Depois ──
+      const tOuvIdsComp = new Set(all.filter(t=>t.assigneeId==='365059000020303001').map(t=>t.id));
+      const tecAtivosTodos = all.filter(t => !tOuvIdsComp.has(t.id) && isTec(t));
+
+      const fechAntes  = closed.filter(t => { const ref=t.closedTime||t.modifiedTime; return ref && new Date(ref).getTime() < EXP_START && isTec(t); });
+      const fechDepois = closed.filter(t => { const ref=t.closedTime||t.modifiedTime; return ref && new Date(ref).getTime() >= EXP_START && isTec(t); });
+
+      const tmaCalc = ts => { const v=ts.filter(t=>t.closedTime&&t.createdTime).map(t=>(new Date(t.closedTime)-new Date(t.createdTime))/86400000); return v.length?(v.reduce((a,b)=>a+b,0)/v.length):null; };
+
+      // Janela antes: dias disponíveis antes de 10/02 dentro dos 70 dias buscados
+      const janelaInicio = new Date(Date.now() - 70*86400000).getTime();
+      const diasAntes  = Math.max(1, Math.round((EXP_START - janelaInicio) / 86400000));
+
+      const velAntes  = fechAntes.length / (diasAntes/7);
+      const velDepois = fechDepois.length / (diasExp/7);
+      const tmaAntes  = tmaCalc(fechAntes);
+      const tmaDepois = tmaCalc(fechDepois);
+
+      const paradosAntes  = tecAtivosTodos.filter(t=>daysSince(t.modifiedTime)>5 && new Date(t.createdTime).getTime() < EXP_START).length;
+      const paradosDepois = tecAtivosTodos.filter(t=>daysSince(t.modifiedTime)>5 && new Date(t.createdTime).getTime() >= EXP_START).length;
+
+      const delta = (antes, depois, menorMelhor=false) => {
+        if (antes == null || depois == null) return { txt: '', cor: 'var(--muted)' };
+        const diff = depois - antes;
+        const pct  = antes > 0 ? Math.round(Math.abs(diff)/antes*100) : 0;
+        const melhorou = menorMelhor ? diff < 0 : diff > 0;
+        const cor = melhorou ? 'var(--green)' : diff === 0 ? 'var(--muted)' : 'var(--red)';
+        const sinal = diff > 0 ? '+' : '';
+        return { txt: `${sinal}${diff > 0 ? '+' : ''}${typeof antes === 'number' && antes % 1 !== 0 ? diff.toFixed(1) : Math.round(diff)} (${pct}%)`, cor };
+      };
+
+      document.getElementById('expAvantFechSem').textContent  = velAntes.toFixed(1) + '/sem';
+      document.getElementById('expAvantTMA').textContent      = tmaAntes ? Math.round(tmaAntes) + 'd' : '—';
+      document.getElementById('expAvantParados').textContent  = paradosAntes;
+      document.getElementById('expDepoisFechSem').textContent = velDepois.toFixed(1) + '/sem';
+      document.getElementById('expDepoisTMA').textContent     = tmaDepois ? Math.round(tmaDepois) + 'd' : '—';
+      document.getElementById('expDepoisParados').textContent = paradosDepois;
+
+      const dFech = delta(velAntes, velDepois, false);
+      const dTMA  = delta(tmaAntes, tmaDepois, true);
+      const dPar  = delta(paradosAntes, paradosDepois, true);
+
+      const setDelta = (id, d) => { const el=document.getElementById(id); el.textContent=d.txt; el.style.color=d.cor; };
+      setDelta('expDeltaFechSem', dFech);
+      setDelta('expDeltaTMA',     dTMA);
+      setDelta('expDeltaParados', dPar);
+
+      // Aviso sobre limitação da janela de dados
+      document.getElementById('expComparativoAviso').textContent =
+        `⚠ Dados "antes" baseados em ${diasAntes} dias disponíveis (janela de 70 dias retroativa). Para comparação mais precisa, o ideal seria ter histórico de 30+ dias antes de 10/02.`;
 
       // Card 1: total técnicos ativos (todos os times)
       setEl('expTecAtivos',   tecAtivos.length);

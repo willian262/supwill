@@ -1532,48 +1532,50 @@
       }
     }
 
-    // Plugin customizado para desenhar as flags
+    // Plugin customizado — bandeira SVG no ponto de cruzamento
     const flagPlugin = {
       id: 'crossoverFlags',
       afterDatasetsDraw(chart) {
         const { ctx, scales: { x, y } } = chart;
         crossovers.forEach(({ i, fechandoMais }) => {
-          const xPos  = x.getPixelForValue(i);
-          const yVal  = Math.max(mm7a[i], mm7f[i]);
-          const yPos  = y.getPixelForValue(yVal) - 10;
-          const cor   = fechandoMais ? '#5ec987' : '#e85c4a';
-          const emoji = fechandoMais ? '↓' : '↑';
-          const label = fechandoMais ? 'mais fechamentos' : 'mais aberturas';
+          const xPos = x.getPixelForValue(i);
+          const yVal = Math.max(mm7a[i], mm7f[i]);
+          const yPos = y.getPixelForValue(yVal) - 8;
+          const cor  = fechandoMais ? '#5ec987' : '#e85c4a';
+
+          ctx.save();
 
           // Linha vertical pontilhada
-          ctx.save();
           ctx.setLineDash([3, 3]);
-          ctx.strokeStyle = cor + '66';
-          ctx.lineWidth = 1;
+          ctx.strokeStyle = cor + '55';
+          ctx.lineWidth   = 1;
           ctx.beginPath();
           ctx.moveTo(xPos, y.getPixelForValue(0));
-          ctx.lineTo(xPos, yPos + 4);
+          ctx.lineTo(xPos, yPos + 2);
           ctx.stroke();
           ctx.setLineDash([]);
 
-          // Flag
-          const flagW = 76, flagH = 18, flagR = 4;
-          const fx = Math.max(4, Math.min(chart.width - flagW - 4, xPos - flagW/2));
-          const fy = Math.max(4, yPos - flagH - 4);
+          // Bandeira: mastro + retângulo
+          const mastroH = 14;
+          const flagW   = 12;
+          const flagH   = 8;
+          const mx      = xPos;
+          const my      = yPos - mastroH;
 
-          ctx.fillStyle = cor + '22';
-          ctx.strokeStyle = cor + '99';
-          ctx.lineWidth = 1;
+          // Mastro
+          ctx.strokeStyle = cor;
+          ctx.lineWidth   = 1.5;
           ctx.beginPath();
-          ctx.roundRect(fx, fy, flagW, flagH, flagR);
-          ctx.fill();
+          ctx.moveTo(mx, yPos);
+          ctx.lineTo(mx, my);
           ctx.stroke();
 
+          // Retângulo da bandeira
           ctx.fillStyle = cor;
-          ctx.font = 'bold 9px Barlow Condensed, sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(emoji + ' ' + label, fx + flagW/2, fy + flagH/2);
+          ctx.beginPath();
+          ctx.rect(mx, my, flagW, flagH);
+          ctx.fill();
+
           ctx.restore();
         });
       }

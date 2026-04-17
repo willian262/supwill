@@ -821,14 +821,14 @@
     <div class="card" style="border-top:2px solid var(--purple)">
       <div class="card-head">
         <span class="card-title">📈 Antes vs Depois do Experimento — Tickets Técnicos</span>
-        <span style="font-size:10px;color:var(--muted)" id="expComparativoSub">referência: Jan/2026 vs após 10/02/2026</span>
+        <span style="font-size:10px;color:var(--muted)" id="expComparativoSub">01/01 a 09/02/2026  vs  10/02/2026 em diante</span>
       </div>
       <div style="padding:14px 18px">
         <div style="display:grid;grid-template-columns:1fr 1px 1fr;gap:0;align-items:stretch">
 
           <!-- ANTES -->
           <div style="padding-right:24px">
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:12px" id="expLabelAntes">Janeiro/2026</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:12px" id="expLabelAntes">01/Jan → 09/Fev 2026</div>
             <div style="display:flex;flex-direction:column;gap:10px">
               <div style="display:flex;justify-content:space-between;align-items:baseline">
                 <div style="font-size:12px;color:var(--muted)">Fechamentos/semana</div>
@@ -2414,20 +2414,19 @@
       const fechAntes  = closed.filter(t => { const ref=t.closedTime||t.modifiedTime; return ref && new Date(ref).getTime() < EXP_START && isTec(t); });
       const fechDepois = closed.filter(t => { const ref=t.closedTime||t.modifiedTime; return ref && new Date(ref).getTime() >= EXP_START && isTec(t); });
 
-      // Janeiro/26 como referência "antes" — mês completo mais próximo antes do experimento
-      const jan26inicio = new Date('2026-01-01T00:00:00-03:00').getTime();
-      const jan26fim    = new Date('2026-02-01T00:00:00-03:00').getTime();
+      // Período de referência "antes": 01/01/2026 até 09/02/2026 (dia anterior ao experimento)
+      const antesInicio = new Date('2026-01-01T00:00:00-03:00').getTime();
+      const antesFim    = new Date('2026-02-09T23:59:59-03:00').getTime();
+      const diasRefAntes = Math.round((antesFim - antesInicio) / 86400000); // ~40 dias
+
       const fechJan = closed.filter(t => {
         const ref = t.closedTime||t.modifiedTime;
-        return ref && new Date(ref).getTime() >= jan26inicio && new Date(ref).getTime() < jan26fim && isTec(t);
+        return ref && new Date(ref).getTime() >= antesInicio && new Date(ref).getTime() <= antesFim && isTec(t);
       });
 
       const tmaCalc = ts => { const v=ts.filter(t=>t.closedTime&&t.createdTime).map(t=>(new Date(t.closedTime)-new Date(t.createdTime))/86400000); return v.length?(v.reduce((a,b)=>a+b,0)/v.length):null; };
 
-      // Usar jan/26 se tiver dados suficientes, senão usar o que tiver
-      const refAntes    = fechJan.length >= 10 ? fechJan : fechAntes;
-      const diasRefAntes = fechJan.length >= 10 ? 31 : Math.max(1, Math.round((EXP_START - new Date(Date.now()-70*86400000).getTime())/86400000));
-      const labelAntes   = fechJan.length >= 10 ? 'Janeiro/2026 (referência)' : 'dias disponíveis antes de 10/02';
+      const refAntes = fechJan.length >= 5 ? fechJan : fechAntes;
 
       const velAntes  = refAntes.length / (diasRefAntes/7);
       const velDepois = fechDepois.length / (diasExp/7);
@@ -2465,9 +2464,9 @@
 
       // Aviso sobre limitação da janela de dados
       document.getElementById('expComparativoAviso').textContent =
-        fechJan.length >= 10
-          ? `ℹ Coluna "antes" usa janeiro/2026 como referência (${fechJan.length} tickets fechados no mês) — mês completo mais próximo antes do experimento.`
-          : `⚠ Poucos dados antes de 10/02 disponíveis (${refAntes.length} tickets). Comparação pode não ser representativa.`;
+        fechJan.length >= 5
+          ? `ℹ "Antes": 01/01 a 09/02/2026 (${fechJan.length} tickets fechados em ${diasRefAntes} dias = ${(fechJan.length/(diasRefAntes/7)).toFixed(1)}/semana). "Depois": desde 10/02/2026 (${diasExp} dias).`
+          : `⚠ Poucos dados disponíveis no período antes de 10/02 (${refAntes.length} tickets).`;
 
       // Card 1: total técnicos ativos (todos os times)
       setEl('expTecAtivos',   tecAtivos.length);

@@ -757,10 +757,13 @@
             <div style="width:10px;height:10px;border-radius:2px;background:var(--yellow)"></div>Abertos
           </div>
           <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)">
-            <div style="width:10px;height:10px;border-radius:2px;background:var(--green)"></div>Fechados
+            <div style="width:10px;height:10px;border-radius:2px;background:var(--green)"></div>Vinicius
           </div>
           <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)">
-            <div style="width:18px;height:2px;border-top:2px dashed var(--cyan)"></div>Saldo
+            <div style="width:10px;height:10px;border-radius:2px;background:var(--cyan)"></div>Camila
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)">
+            <div style="width:18px;height:2px;border-top:2px dashed var(--purple)"></div>Saldo
           </div>
         </div>
       </div>
@@ -833,14 +836,6 @@
 
     </div>
 
-    <!-- VEREDICTO -->
-    <div class="card" id="expVeredictoCard">
-      <div class="card-head"><span class="card-title">⚖ Veredicto Atual</span></div>
-      <div style="padding:20px 18px" id="expVeredicto">
-        <div class="no-data">Calculando...</div>
-      </div>
-    </div>
-
     <!-- ANÁLISE DE AR -->
     <div class="card" style="border-top:2px solid var(--orange)">
       <div class="card-head">
@@ -877,6 +872,15 @@
           </div>
         </div>
 
+      </div>
+    </div>
+
+
+    <!-- VEREDICTO -->
+    <div class="card" id="expVeredictoCard">
+      <div class="card-head"><span class="card-title">⚖ Veredicto Atual</span></div>
+      <div style="padding:20px 18px" id="expVeredicto">
+        <div class="no-data">Calculando...</div>
       </div>
     </div>
 
@@ -2116,51 +2120,59 @@
     document.getElementById('expUpdate').textContent = 'carregando...';
 
     try {
-      const [allData, closedData, agentsData] = await Promise.all([
-        zoho('tickets', {}),
-        zoho('tickets', { mode: 'closed30' }),
-        zoho('agents',  { limit: 100 })
-      ]);
+      // Usar cache para evitar números mudando a cada clique
+      // Só busca dados novos se cache expirou (5 min) ou não existe
+      const CACHE_TTL = 5 * 60 * 1000;
+      const now = Date.now();
+      let allData, closedData, agentsData;
+
+      if (window._expCache && (now - window._expCache.ts) < CACHE_TTL) {
+        ({ allData, closedData, agentsData } = window._expCache);
+      } else {
+        [allData, closedData, agentsData] = await Promise.all([
+          zoho('tickets', {}),
+          zoho('tickets', { mode: 'closed30' }),
+          zoho('agents',  { limit: 200 })
+        ]);
+        window._expCache = { allData, closedData, agentsData, ts: now };
+      }
 
       const all    = allData.data    || [];
       const closed = closedData.data || [];
 
       const agentNames = {};
-      (agentsData.data||[]).forEach(a => {
+      const mapAgents = arr => (arr||[]).forEach(a => {
         const fn=(a.firstName||'').trim(), ln=(a.lastName||'').trim();
         agentNames[a.id] = fn?(ln?fn+' '+ln:fn):(a.name||'').trim()||a.id;
       });
+      mapAgents(agentsData.data);
+
+      // Buscar página 2 de agentes (Vinicius Fonseca está além dos primeiros 200)
+      try {
+        const pg2 = await zoho('agents', { limit: 200, from: 201 });
+        mapAgents(pg2.data);
+      } catch(e) {}
 
       const TEAM_TEC  = ['Defeito em produto','Suporte Técnico'];
       const EXP_START = new Date('2026-02-10T00:00:00-03:00').getTime();
       const isTec     = t => TEAM_TEC.some(c => (t.classification||'').toLowerCase().includes(c.toLowerCase()));
       const daysSince = d => d ? (Date.now() - new Date(d).getTime()) / 86400000 : 999;
 
-      const SAT_PROC_NAMES = ['vinicius','camila sakamoto'];
-      const SAT_PROC_IDS = Object.entries(agentNames)
-        .filter(([id,n]) => SAT_PROC_NAMES.some(s => n.toLowerCase().includes(s)))
-        .map(([id]) => id);
-
-      // Buscar agentes extras (desativados/não listados) via página extra de agentes
-      const unknownIds = [...new Set(all.filter(isTec).map(t=>t.assigneeId).filter(id=>id&&!agentNames[id]))];
-      if (unknownIds.length > 0) {
-        try {
-          const pg2 = await zoho('agents', { limit: 100, from: 101 });
-          (pg2.data||[]).forEach(a => {
-            const fn=(a.firstName||'').trim(), ln=(a.lastName||'').trim();
-            agentNames[a.id] = fn?(ln?fn+' '+ln:fn):(a.name||'').trim()||a.id;
-          });
-        } catch(e) {}
-      }
+      // Team ID do SAT Processos — filtro correto: ticket.teamId === SAT_PROC_TEAM
+      const SAT_PROC_TEAM = '365059000165633588';
+      // IDs individuais para separar contribuição de cada um no gráfico
+      const VINI_AGENT_ID   = '365059000135165005'; // Vinicius Fonseca
+      const CAMILA_AGENT_ID = '365059000127354039'; // Camila Sakamoto
 
       const tecAtivos  = all.filter(isTec);
-      const comSATProc = tecAtivos.filter(t => SAT_PROC_IDS.includes(t.assigneeId));
+      const comSATProc = tecAtivos.filter(t => t.teamId === SAT_PROC_TEAM);
       const parados5   = tecAtivos.filter(t => daysSince(t.modifiedTime) > 5);
       const pct5       = tecAtivos.length ? Math.round(parados5.length / tecAtivos.length * 100) : 0;
 
+      // Fechados no experimento = técnicos do team SAT Processos após início do experimento
       const tecFechados = closed.filter(isTec).filter(t => {
         const ref = t.closedTime || t.modifiedTime;
-        return ref && new Date(ref).getTime() >= EXP_START;
+        return ref && new Date(ref).getTime() >= EXP_START && t.teamId === SAT_PROC_TEAM;
       });
 
       const tmaVals  = tecFechados.filter(t => t.closedTime && t.createdTime)
@@ -2171,8 +2183,11 @@
       document.getElementById('expDiasLabel').textContent = diasExp + ' dias de experimento';
       setEl('expTecAtivos',   tecAtivos.length);
       setEl('expTecAtivosSub', tecAtivos.filter(t=>t.statusType==='Open').length + ' abertos · ' + tecAtivos.filter(t=>t.statusType==='On Hold').length + ' em espera');
+      const viniTec   = comSATProc.filter(t=>t.assigneeId===VINI_AGENT_ID).length;
+      const camilaTec = comSATProc.filter(t=>t.assigneeId===CAMILA_AGENT_ID).length;
+      const outrosTec = comSATProc.length - viniTec - camilaTec;
       setEl('expComSATProc',  comSATProc.length);
-      setEl('expComSATProcSub', SAT_PROC_IDS.map(id=>agentNames[id]).filter(Boolean).join(' · ') || 'Vinicius · Camila');
+      setEl('expComSATProcSub', `Vinicius: ${viniTec} · Camila: ${camilaTec}${outrosTec>0?' · Outros: '+outrosTec:''}`);
       setEl('expFechados',    tecFechados.length);
       setEl('expFechadosSub', (tecFechados.length / Math.max(diasExp/7,1)).toFixed(1) + '/semana');
       setEl('expTMA',         tmaMedia ? Math.round(tmaMedia) + 'd' : '—');
@@ -2180,15 +2195,23 @@
       setEl('expParados5',    parados5.length, parados5.length > 0 ? 'danger' : 'ok');
       setEl('expParados5Sub', pct5 + '% do total técnico', pct5 > 20 ? 'danger' : 'ok');
 
-      const sLabels=[],sAbertos=[],sFechados=[],sSaldo=[];
+      const sLabels=[],sAbertos=[],sFechados=[],sVini=[],sCamila=[],sSaldo=[];
       for (let i=0;i<12;i++) {
         const ini=new Date(EXP_START+i*7*86400000);
         const fim=new Date(EXP_START+(i+1)*7*86400000);
         if (ini>Date.now()) break;
         sLabels.push('S'+(i+1)+' '+ini.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
-        const ab=all.filter(isTec).filter(t=>t.createdTime&&new Date(t.createdTime)>=ini&&new Date(t.createdTime)<fim).length;
-        const fe=closed.filter(isTec).filter(t=>{const ref=t.closedTime||t.modifiedTime;return ref&&new Date(ref)>=ini&&new Date(ref)<fim;}).length;
-        sAbertos.push(ab);sFechados.push(fe);sSaldo.push(fe-ab);
+        // Abertos: todos técnicos do SAT Processos criados na semana
+        const ab=all.filter(isTec).filter(t=>t.teamId===SAT_PROC_TEAM&&t.createdTime&&new Date(t.createdTime)>=ini&&new Date(t.createdTime)<fim).length;
+        // Fechados: técnicos do SAT Processos fechados na semana
+        const feTodos=closed.filter(isTec).filter(t=>{
+          const ref=t.closedTime||t.modifiedTime;
+          return ref&&new Date(ref)>=ini&&new Date(ref)<fim&&t.teamId===SAT_PROC_TEAM;
+        });
+        const fe=feTodos.length;
+        const fv=feTodos.filter(t=>t.assigneeId===VINI_AGENT_ID).length;
+        const fc=feTodos.filter(t=>t.assigneeId===CAMILA_AGENT_ID).length;
+        sAbertos.push(ab);sFechados.push(fe);sVini.push(fv);sCamila.push(fc);sSaldo.push(fe-ab);
       }
 
       if (window._expChart) window._expChart.destroy();
@@ -2197,14 +2220,15 @@
         window._expChart=new Chart(ctx.getContext('2d'),{
           type:'bar',
           data:{labels:sLabels,datasets:[
-            {label:'Abertos', data:sAbertos, backgroundColor:'rgba(255,208,76,0.7)', borderColor:'#FFD04C',borderWidth:1,borderRadius:3},
-            {label:'Fechados',data:sFechados,backgroundColor:'rgba(94,201,135,0.7)', borderColor:'#5ec987',borderWidth:1,borderRadius:3},
-            {label:'Saldo',   data:sSaldo,   type:'line',borderColor:'#22d3ee',borderWidth:2,borderDash:[4,4],pointRadius:3,pointBackgroundColor:'#22d3ee',fill:false,tension:0.3,yAxisID:'y2',spanGaps:true}
+            {label:'Abertos',  data:sAbertos, backgroundColor:'rgba(255,208,76,0.55)',borderColor:'#FFD04C',borderWidth:1,borderRadius:3,stack:'ab'},
+            {label:'Vinicius', data:sVini,    backgroundColor:'rgba(94,201,135,0.8)', borderColor:'#5ec987',borderWidth:1,borderRadius:0,stack:'fe'},
+            {label:'Camila',   data:sCamila,  backgroundColor:'rgba(34,211,238,0.75)',borderColor:'#22d3ee',borderWidth:1,borderRadius:3,stack:'fe'},
+            {label:'Saldo',    data:sSaldo,   type:'line',borderColor:'#a78bfa',borderWidth:2,borderDash:[4,4],pointRadius:3,pointBackgroundColor:'#a78bfa',fill:false,tension:0.3,yAxisID:'y2',spanGaps:true}
           ]},
           options:{responsive:true,interaction:{mode:'index',intersect:false},
             plugins:{legend:{display:false},
               tooltip:{backgroundColor:'#202020',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,titleColor:'#f0ede8',bodyColor:'#888580',
-                callbacks:{afterBody:items=>{const a=items.find(i=>i.dataset.label==='Abertos')?.parsed.y||0;const f=items.find(i=>i.dataset.label==='Fechados')?.parsed.y||0;return 'Saldo: '+(f-a>=0?'+':'')+(f-a);}},
+                callbacks:{afterBody:items=>{const a=items.find(i=>i.dataset.label==='Abertos')?.parsed.y||0;const v=items.find(i=>i.dataset.label==='Vinicius')?.parsed.y||0;const c=items.find(i=>i.dataset.label==='Camila')?.parsed.y||0;const f=v+c;return ['Total fechados: '+f,'Saldo: '+(f-a>=0?'+':'')+(f-a)];}},
                 filter:item=>item.dataset.label!=='Saldo'
               }
             },

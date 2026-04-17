@@ -218,7 +218,99 @@
     ::-webkit-scrollbar { width:4px; height:4px; }
     ::-webkit-scrollbar-track { background:transparent; }
     ::-webkit-scrollbar-thumb { background:var(--subtle); border-radius:2px; }
-  </style>
+
+  /* ── RESPONSIVO MOBILE ── */
+  @media (max-width: 768px) {
+
+    /* Topbar */
+    .topbar { padding: 0 12px; height: 46px; }
+    .logo-sep { display: none; }
+    .logo-sub { display: none; }
+    .topbar-right { gap: 6px; }
+    #lastUpdate { display: none; }
+    #countdown { font-size: 10px; }
+    .btn-refresh { padding: 5px 10px; }
+    .btn-refresh svg { display: block; }
+    .btn-refresh::after { content: none; }
+    /* Esconder texto "Atualizar" no botão, manter só ícone */
+    #btnRefresh { gap: 0; font-size: 0; }
+    #btnRefresh svg { width: 14px; height: 14px; }
+
+    /* Alerta de parados */
+    .alert-bar { font-size: 10px; padding: 6px 12px; }
+
+    /* Abas — scroll horizontal */
+    .tabs { overflow-x: auto; overflow-y: hidden; flex-wrap: nowrap; padding: 0 12px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab-btn { white-space: nowrap; flex-shrink: 0; font-size: 10px; padding: 10px 10px; }
+    #tabExp { margin-left: 0 !important; } /* no mobile não empurra para direita */
+
+    /* Dashboard */
+    .dash { padding: 12px; gap: 12px; }
+
+    /* KPI strip — 2 colunas */
+    .kpi-strip { grid-template-columns: repeat(2, 1fr) !important; gap: 8px; }
+    .kpi { padding: 12px; }
+    .kpi-value { font-size: 36px !important; }
+    .kpi-label { font-size: 9px; letter-spacing: 1px; }
+
+    /* Cards */
+    .card { border-radius: 8px; }
+    .card-head { padding: 10px 12px; flex-wrap: wrap; gap: 6px; }
+    .card-title { font-size: 11px; }
+
+    /* Grids 2 colunas → 1 coluna */
+    div[style*="grid-template-columns:1fr 1fr"],
+    div[style*="grid-template-columns: 1fr 1fr"] {
+      grid-template-columns: 1fr !important;
+    }
+
+    /* Gráficos — altura menor */
+    canvas { max-height: 180px; }
+
+    /* Agent list */
+    .agent-list { max-height: 300px; }
+    .agent-row { padding: 8px 10px; gap: 8px; }
+    .agent-name { font-size: 11px; }
+    .agent-total { font-size: 18px; }
+    .avatar { width: 30px; height: 30px; font-size: 11px; flex-shrink: 0; }
+
+    /* Tabelas */
+    .ticket-table { font-size: 11px; }
+    .ticket-table td, .ticket-table th { padding: 6px 8px; }
+
+    /* Saúde da operação — força 1 coluna */
+    #healthGrid { grid-template-columns: 1fr !important; }
+
+    /* Filtro de time */
+    .filter-btns { flex-wrap: wrap; gap: 4px; }
+    .filter-btn { font-size: 9px; padding: 3px 8px; }
+
+    /* Fluxo diário e outros charts */
+    .chart-wrap { padding: 8px 10px; }
+
+    /* Texto menor em subtítulos */
+    .kpi-sub { font-size: 9px; }
+
+    /* Cards de KPI do experimento — 2 colunas */
+    div[style*="grid-template-columns:repeat(5,1fr)"] {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+    div[style*="grid-template-columns:repeat(4,1fr)"] {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    /* Pipeline */
+    #expPipeline div[style*="width:190px"] {
+      width: 120px !important;
+      font-size: 9px !important;
+    }
+
+    /* Veredicto */
+    #expVeredicto div[style*="font-size:48px"] { font-size: 32px !important; }
+    #expVeredicto div[style*="font-size:20px"] { font-size: 14px !important; }
+  }
+
 </head>
 <body>
 

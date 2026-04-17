@@ -1532,48 +1532,45 @@
       }
     }
 
-    // Plugin customizado — bandeira SVG no ponto de cruzamento
+    // Plugin customizado — bandeira fixada no topo do chartArea (área escura acima das barras)
     const flagPlugin = {
       id: 'crossoverFlags',
       afterDraw(chart) {
-        const { ctx, scales: { x, y } } = chart;
+        const { ctx, chartArea, scales: { x, y } } = chart;
         crossovers.forEach(({ i, fechandoMais }) => {
-          const xPos = x.getPixelForValue(i);
-          const yVal = Math.max(mm7a[i], mm7f[i]);
-          const yPos = y.getPixelForValue(yVal) - 8;
-          const cor  = fechandoMais ? '#5ec987' : '#e85c4a';
+          const xPos  = x.getPixelForValue(i);
+          const cor   = fechandoMais ? '#5ec987' : '#e85c4a';
+          // Posição fixa no topo do gráfico (área escura garantida)
+          const flagTop = chartArea.top + 4;
+          const mastroB = chartArea.top + 22; // base do mastro
+          const flagW   = 10;
+          const flagH   = 7;
 
           ctx.save();
 
-          // Linha vertical pontilhada
+          // Linha vertical pontilhada da base até o mastro
           ctx.setLineDash([3, 3]);
-          ctx.strokeStyle = cor + '55';
+          ctx.strokeStyle = cor + '44';
           ctx.lineWidth   = 1;
           ctx.beginPath();
-          ctx.moveTo(xPos, y.getPixelForValue(0));
-          ctx.lineTo(xPos, yPos + 2);
+          ctx.moveTo(xPos, chartArea.bottom);
+          ctx.lineTo(xPos, mastroB);
           ctx.stroke();
           ctx.setLineDash([]);
-
-          // Bandeira: mastro + retângulo
-          const mastroH = 14;
-          const flagW   = 12;
-          const flagH   = 8;
-          const mx      = xPos;
-          const my      = yPos - mastroH;
 
           // Mastro
           ctx.strokeStyle = cor;
           ctx.lineWidth   = 1.5;
+          ctx.lineCap     = 'round';
           ctx.beginPath();
-          ctx.moveTo(mx, yPos);
-          ctx.lineTo(mx, my);
+          ctx.moveTo(xPos, mastroB);
+          ctx.lineTo(xPos, flagTop);
           ctx.stroke();
 
-          // Retângulo da bandeira
+          // Bandeira
           ctx.fillStyle = cor;
           ctx.beginPath();
-          ctx.rect(mx, my, flagW, flagH);
+          ctx.rect(xPos, flagTop, flagW, flagH);
           ctx.fill();
 
           ctx.restore();
@@ -1597,6 +1594,7 @@
           filter: item => !item.dataset.label.startsWith('MM7'),
           callbacks: { afterBody: items => { const a=items.find(i=>i.dataset.label==='Abertos')?.parsed.y||0; const f=items.find(i=>i.dataset.label==='Fechados')?.parsed.y||0; const s=f-a; return 'Saldo: '+(s>=0?'+':'')+s; } }
         }},
+        layout: { padding: { top: 28 } },
         scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#888580', font: { size: 10 } } }, y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#888580', font: { size: 10 }, stepSize: 5 }, beginAtZero: true } }
       }
     });

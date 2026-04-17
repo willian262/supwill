@@ -2362,11 +2362,11 @@
         'Backlog atual: '+backlogAtual+' tickets · Saldo desta semana: '+(varBacklog!==null?(varBacklog>=0?'+':'')+varBacklog:'N/D'),
         varBacklog !== null && varBacklog > 0 ? 'var(--red)' : varBacklog !== null && varBacklog < 0 ? 'var(--green)' : 'var(--orange)');
 
-      // Q4: Tempo médio em Análise de AR — meta: ≤2 dias
+      // Q4: Tempo médio em Análise de AR — meta: ≤1 dia
       const avgAR = avgAnalise ? Math.round(avgAnalise*10)/10 : null;
       setQ('expQ4', avgAR!==null && avgAR<=2,
-        avgAR ? '⏳ '+avgAR+'d (meta: ≤2d)' : '— sem dados',
-        avgAR ? Math.min(100, Math.round((1-avgAR/7)*100)) : 0,
+        avgAR ? '⏳ '+avgAR+'d (meta: ≤1d)' : '— sem dados',
+        avgAR ? Math.min(100, Math.round((1-avgAR/4)*100)) : 0,
         emAnaliseAR.length+' tickets em Análise de AR agora · média '+( avgAR ? avgAR+'d parados' : 'N/D'),
         avgAR && avgAR<=4 ? 'var(--orange)':'var(--red)');
 
@@ -2408,7 +2408,7 @@
       // ── Veredicto — baseado nas novas métricas ──
       // q3ok = backlog reduzindo (saldo negativo = bom); invertemos o sentido no veredicto
       const q3positivo = varBacklog !== null && varBacklog <= 0;
-      const qOK = [pctLt30>=40, fechPorSemana>=7, q3positivo, avgAR!==null&&avgAR<=2].filter(Boolean).length;
+      const qOK = [pctLt30>=40, fechPorSemana>=7, q3positivo, avgAR!==null&&avgAR<=1].filter(Boolean).length;
 
       // Cards simples Vinicius + Camila
       const mkAgent = (agentId, label, cor) => {

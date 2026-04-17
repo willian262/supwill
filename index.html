@@ -310,6 +310,35 @@
     #expVeredicto div[style*="font-size:20px"] { font-size: 14px !important; }
   }
 
+  /* ── Ticker de Recados ── */
+  #recadoTicker {
+    display: none;
+    flex: 1;
+    overflow: hidden;
+    margin: 0 16px;
+    height: 24px;
+    mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+  }
+  #recadoTicker.show { display: block; }
+  #recadoText {
+    display: inline-block;
+    white-space: nowrap;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--yellow);
+    animation: ticker-scroll 22s linear infinite;
+    padding-left: 100%;
+    line-height: 24px;
+  }
+  @keyframes ticker-scroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
+  }
+
 </style>
 </head>
 <body>
@@ -324,6 +353,7 @@
       <div class="live-dot"></div>ao vivo
     </div>
   </div>
+  <div id="recadoTicker"><span id="recadoText"></span></div>
   <div class="topbar-right">
     <span class="last-update" id="lastUpdate">—</span>
     <span class="countdown" id="countdown"></span>
@@ -529,6 +559,19 @@
           <button onclick="setHealthFilter('ouvidoria')" id="hfOuvidoria" style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid rgba(255,255,255,0.07);background:transparent;color:#888580;cursor:pointer">📢 Ouvidoria</button>
         </div>
         <span class="card-badge danger" id="healthBadge">0 em alerta</span>
+        <!-- Filtro por agente -->
+        <div style="position:relative" id="agentFilterWrap">
+          <button onclick="toggleAgentFilter()" id="agentFilterBtn"
+            title="Filtrar por agente"
+            style="display:flex;align-items:center;gap:4px;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:4px;border:1px solid rgba(255,255,255,0.07);background:transparent;color:#888580;cursor:pointer">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            <span id="agentFilterLabel">Agente</span>
+          </button>
+          <div id="agentFilterDropdown"
+            style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);border-radius:7px;min-width:170px;z-index:200;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.5)">
+            <div id="agentFilterList"></div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="health-grid">
@@ -1499,21 +1542,89 @@
     const saldoEl = document.getElementById('fluxoBadge');
     saldoEl.textContent = (saldo>=0?'+':'')+saldo;
     saldoEl.style.color = saldo >= 0 ? 'var(--green)' : 'var(--red)';
+
+    // Detectar cruzamentos das MM7
+    // Só marca se antes do cruzamento as linhas estavam separadas por ≥ 2
+    // E depois do cruzamento a diferença é ≥ 1 (cruzamento real, não ruído)
+    const mm7a = mm7(aData);
+    const mm7f = mm7(fData);
+    const crossovers = [];
+    const THRESHOLD_ANTES  = 1.5; // separação mínima antes do cruzamento
+    const THRESHOLD_DEPOIS = 0.5; // separação mínima depois do cruzamento
+    for (let i = 1; i < mm7a.length; i++) {
+      const prevDiff = mm7f[i-1] - mm7a[i-1];
+      const currDiff = mm7f[i]   - mm7a[i];
+      const sinaisTrocaram = prevDiff * currDiff < 0;
+      const eraSignificativo = Math.abs(prevDiff) >= THRESHOLD_ANTES;
+      const agSignificativo  = Math.abs(currDiff) >= THRESHOLD_DEPOIS;
+      if (sinaisTrocaram && eraSignificativo && agSignificativo) {
+        crossovers.push({ i, fechandoMais: currDiff > 0 });
+      }
+    }
+
+    // Plugin customizado — bandeira fixada no topo do chartArea (área escura acima das barras)
+    const flagPlugin = {
+      id: 'crossoverFlags',
+      afterDraw(chart) {
+        const { ctx, chartArea, scales: { x, y } } = chart;
+        crossovers.forEach(({ i, fechandoMais }) => {
+          const xPos  = x.getPixelForValue(i);
+          const cor   = fechandoMais ? '#5ec987' : '#e85c4a';
+          // Posição fixa no topo do gráfico (área escura garantida)
+          const flagTop = chartArea.top + 4;
+          const mastroB = chartArea.top + 22; // base do mastro
+          const flagW   = 10;
+          const flagH   = 7;
+
+          ctx.save();
+
+          // Linha vertical pontilhada da base até o mastro
+          ctx.setLineDash([3, 3]);
+          ctx.strokeStyle = cor + '44';
+          ctx.lineWidth   = 1;
+          ctx.beginPath();
+          ctx.moveTo(xPos, chartArea.bottom);
+          ctx.lineTo(xPos, mastroB);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // Mastro
+          ctx.strokeStyle = cor;
+          ctx.lineWidth   = 1.5;
+          ctx.lineCap     = 'round';
+          ctx.beginPath();
+          ctx.moveTo(xPos, mastroB);
+          ctx.lineTo(xPos, flagTop);
+          ctx.stroke();
+
+          // Bandeira
+          ctx.fillStyle = cor;
+          ctx.beginPath();
+          ctx.rect(xPos, flagTop, flagW, flagH);
+          ctx.fill();
+
+          ctx.restore();
+        });
+      }
+    };
+
     if (window._fluxoChart) window._fluxoChart.destroy();
     const ctx = document.getElementById('fluxoChart').getContext('2d');
     window._fluxoChart = new Chart(ctx, {
       type: 'bar',
+      plugins: [flagPlugin],
       data: { labels, datasets: [
         { label: 'Abertos',      data: aData, backgroundColor: 'rgba(255,208,76,0.7)', borderColor: '#FFD04C', borderWidth: 1, borderRadius: 3 },
         { label: 'Fechados',     data: fData, backgroundColor: 'rgba(94,201,135,0.7)', borderColor: '#5ec987', borderWidth: 1, borderRadius: 3 },
-        { label: 'MM7 Abertos',  data: mm7(aData), type: 'line', borderColor: '#FFD04C', borderWidth: 2, borderDash: [4,4], pointRadius: 0, fill: false, tension: 0.4 },
-        { label: 'MM7 Fechados', data: mm7(fData), type: 'line', borderColor: '#5ec987', borderWidth: 2, borderDash: [4,4], pointRadius: 0, fill: false, tension: 0.4 },
+        { label: 'MM7 Abertos',  data: mm7a, type: 'line', borderColor: '#FFD04C', borderWidth: 2, borderDash: [4,4], pointRadius: 0, fill: false, tension: 0.4 },
+        { label: 'MM7 Fechados', data: mm7f, type: 'line', borderColor: '#5ec987', borderWidth: 2, borderDash: [4,4], pointRadius: 0, fill: false, tension: 0.4 },
       ]},
       options: { responsive: true, interaction: { mode: 'index', intersect: false },
         plugins: { legend: { display: false }, tooltip: { backgroundColor: '#202020', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, titleColor: '#f0ede8', bodyColor: '#888580',
           filter: item => !item.dataset.label.startsWith('MM7'),
           callbacks: { afterBody: items => { const a=items.find(i=>i.dataset.label==='Abertos')?.parsed.y||0; const f=items.find(i=>i.dataset.label==='Fechados')?.parsed.y||0; const s=f-a; return 'Saldo: '+(s>=0?'+':'')+s; } }
         }},
+        layout: { padding: { top: 28 } },
         scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#888580', font: { size: 10 } } }, y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#888580', font: { size: 10 }, stepSize: 5 }, beginAtZero: true } }
       }
     });
@@ -2277,11 +2388,94 @@
 
   // ── Filtro de time na Saúde da Operação ──
   window._healthFilter  = 'todos';
+  window._healthAgentFilter = null; // null = todos agentes
   window._healthTickets = { warn: [], crit: [] };
   window._healthAgentNames = {};
   const VICTOR_ID_HEALTH = '365059000020303001';
   const TEAM_PROC_HEALTH  = ['Logística','Comercial','Financeiro'];
   const TEAM_TEC_HEALTH   = ['Defeito em produto','Suporte Técnico'];
+
+  function toggleAgentFilter() {
+    const dd = document.getElementById('agentFilterDropdown');
+    if (!dd) return;
+    const isOpen = dd.style.display !== 'none';
+    dd.style.display = isOpen ? 'none' : 'block';
+    if (!isOpen) buildAgentFilterList();
+  }
+
+  function buildAgentFilterList() {
+    const names  = window._healthAgentNames;
+    const warn   = window._healthTickets.warn;
+    const crit   = window._healthTickets.crit;
+    const all    = [...warn, ...crit];
+
+    // Agentes únicos nos tickets atuais (respeitando filtro de time)
+    const f = window._healthFilter;
+    const matchFilter = t => {
+      if (f === 'todos') return true;
+      if (f === 'ouvidoria') return t.assigneeId === VICTOR_ID_HEALTH;
+      const cls = (t.classification||'').toLowerCase();
+      if (f === 'processos') return t.assigneeId !== VICTOR_ID_HEALTH && TEAM_PROC_HEALTH.some(c=>cls.includes(c.toLowerCase()));
+      if (f === 'tecnico')   return t.assigneeId !== VICTOR_ID_HEALTH && TEAM_TEC_HEALTH.some(c=>cls.includes(c.toLowerCase()));
+      return true;
+    };
+
+    const agentCount = {};
+    all.filter(matchFilter).forEach(t => {
+      if (!t.assigneeId) return;
+      const n = names[t.assigneeId]?.split(' ')[0] || '—';
+      const id = t.assigneeId;
+      if (!agentCount[id]) agentCount[id] = { name: n, count: 0 };
+      agentCount[id].count++;
+    });
+
+    const agents = Object.entries(agentCount).sort((a,b)=>b[1].count-a[1].count);
+    const current = window._healthAgentFilter;
+
+    const rowStyle = (id) => `display:flex;justify-content:space-between;align-items:center;padding:8px 14px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;transition:background .15s;${current===id?'background:rgba(255,208,76,0.1);color:#FFD04C':'color:#f0ede8'}`;
+
+    document.getElementById('agentFilterList').innerHTML =
+      `<div onmouseenter="this.style.background='rgba(255,255,255,0.04)'" onmouseleave="this.style.background='${current===null?'rgba(255,208,76,0.1)':'transparent'}'" onclick="setAgentFilter(null)" style="${rowStyle(null)}">
+        <span>Todos os agentes</span>
+        <span style="color:var(--muted);font-size:11px">${all.filter(matchFilter).length}</span>
+      </div>
+      <div style="height:1px;background:rgba(255,255,255,0.06);margin:2px 0"></div>` +
+      agents.map(([id, {name, count}]) =>
+        `<div onmouseenter="this.style.background='rgba(255,255,255,0.04)'" onmouseleave="this.style.background='${current===id?'rgba(255,208,76,0.1)':'transparent'}'" onclick="setAgentFilter('${id}')" style="${rowStyle(id)}">
+          <span>${name}</span>
+          <span style="color:var(--muted);font-size:11px">${count}</span>
+        </div>`
+      ).join('');
+  }
+
+  function setAgentFilter(agentId) {
+    window._healthAgentFilter = agentId;
+    document.getElementById('agentFilterDropdown').style.display = 'none';
+    const names = window._healthAgentNames;
+    const btn   = document.getElementById('agentFilterBtn');
+    if (agentId) {
+      const name = names[agentId]?.split(' ')[0] || 'Agente';
+      btn.style.color  = '#FFD04C';
+      btn.style.borderColor = 'rgba(255,208,76,0.3)';
+      btn.style.background  = 'rgba(255,208,76,0.1)';
+      document.getElementById('agentFilterLabel').textContent = name;
+    } else {
+      btn.style.color  = '#888580';
+      btn.style.borderColor = 'rgba(255,255,255,0.07)';
+      btn.style.background  = 'transparent';
+      document.getElementById('agentFilterLabel').textContent = 'Agente';
+    }
+    applyHealthFilter();
+  }
+
+  // Fechar dropdown ao clicar fora
+  document.addEventListener('click', e => {
+    const wrap = document.getElementById('agentFilterWrap');
+    if (wrap && !wrap.contains(e.target)) {
+      const dd = document.getElementById('agentFilterDropdown');
+      if (dd) dd.style.display = 'none';
+    }
+  });
 
   function setHealthFilter(filter) {
     window._healthFilter = filter;
@@ -2309,8 +2503,8 @@
       return true;
     };
 
-    const filteredWarn = warn.filter(matchFilter);
-    const filteredCrit = crit.filter(matchFilter);
+    const filteredWarn = warn.filter(t => matchFilter(t) && (!window._healthAgentFilter || t.assigneeId === window._healthAgentFilter));
+    const filteredCrit = crit.filter(t => matchFilter(t) && (!window._healthAgentFilter || t.assigneeId === window._healthAgentFilter));
 
     setEl('hWarnCount', filteredWarn.length);
     setEl('hCritCount', filteredCrit.length);
@@ -2577,15 +2771,18 @@
       const ultimas2Saldo  = sSaldo.slice(-2);
       const varBacklog     = ultimas2Saldo.length >= 2 ? ultimas2Saldo[ultimas2Saldo.length-1] : null;
       const q3ok = varBacklog !== null && varBacklog >= 0; // saldo >= 0 = fechando >= abrindo
-      const varLabel = varBacklog !== null ? (varBacklog >= 0 ? '+'+varBacklog+' (↑ crescendo)' : varBacklog+' (↓ reduzindo)') : '—';
-      const q3cor = q3ok ? 'var(--orange)' : 'var(--green)'; // verde = reduzindo = bom
-      // Barra: 100% = backlog estável ou reduzindo, menor = mais crescendo
+      // +N = backlog CRESCENDO (ruim = vermelho), -N = backlog REDUZINDO (bom = verde)
       const q3Pct = varBacklog !== null ? Math.max(0, Math.min(100, 50 - varBacklog*3)) : 0;
-      setQ('expQ3', q3ok && varBacklog === 0,
-        varBacklog !== null && varBacklog < 0 ? '✅ Reduzindo '+varBacklog : '⏳ '+varLabel,
+      const q3BadgeText = varBacklog === null ? '—'
+        : varBacklog > 0  ? '⚠ +'+varBacklog+' tickets (backlog crescendo)'
+        : varBacklog < 0  ? '✅ '+varBacklog+' tickets (backlog reduzindo)'
+        : '✅ Estável (saldo zero)';
+      const q3BadgeCor = varBacklog > 0 ? 'var(--red)' : varBacklog < 0 ? 'var(--green)' : 'var(--muted)';
+      setQ('expQ3', varBacklog !== null && varBacklog <= 0,
+        q3BadgeText,
         q3Pct,
-        'Backlog atual: '+backlogAtual+' tickets · Saldo desta semana: '+(varBacklog!==null?(varBacklog>=0?'+':'')+varBacklog:'N/D'),
-        varBacklog !== null && varBacklog > 0 ? 'var(--red)' : varBacklog !== null && varBacklog < 0 ? 'var(--green)' : 'var(--orange)');
+        'Backlog atual: '+backlogAtual+' tickets · Saldo desta semana: '+(varBacklog!==null?(varBacklog>0?'+':'')+varBacklog:'N/D')+' · meta: saldo ≤ 0',
+        q3BadgeCor);
 
       // Q4: Tempo médio em Análise de AR — meta: ≤1 dia
       const avgAR = avgAnalise ? Math.round(avgAnalise*10)/10 : null;
@@ -2699,9 +2896,28 @@
     }
   }
 
+  // ── Ticker de Recados ──
+  async function loadRecado() {
+    try {
+      const data = await fetch('/api/recados').then(r => r.json());
+      const ticker = document.getElementById('recadoTicker');
+      const text   = document.getElementById('recadoText');
+      if (data.recado && ticker && text) {
+        text.textContent = '📢  ' + data.recado + '   ·   ' + data.recado + '   ·   ' + data.recado;
+        ticker.classList.add('show');
+      } else if (ticker) {
+        ticker.classList.remove('show');
+      }
+    } catch(e) {
+      // Silencioso — se falhar o ticker simplesmente não aparece
+    }
+  }
+
   show('viewLoading');
   loadData();
+  loadRecado(); // Buscar recado do dia
   setInterval(loadData, 300000);
+  setInterval(loadRecado, 600000); // Atualizar recado a cada 10 min
   // Neppo carrega separado com delay para não sobrecarregar
   setTimeout(() => {
     loadNeppo();

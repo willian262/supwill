@@ -1514,13 +1514,20 @@
     saldoEl.style.color = saldo >= 0 ? 'var(--green)' : 'var(--red)';
 
     // Detectar cruzamentos das MM7
+    // Só marca se antes do cruzamento as linhas estavam separadas por ≥ 2
+    // E depois do cruzamento a diferença é ≥ 1 (cruzamento real, não ruído)
     const mm7a = mm7(aData);
     const mm7f = mm7(fData);
     const crossovers = [];
+    const THRESHOLD_ANTES  = 2.0; // separação mínima antes do cruzamento
+    const THRESHOLD_DEPOIS = 1.0; // separação mínima depois do cruzamento
     for (let i = 1; i < mm7a.length; i++) {
       const prevDiff = mm7f[i-1] - mm7a[i-1];
       const currDiff = mm7f[i]   - mm7a[i];
-      if (prevDiff * currDiff < 0) { // sinal trocou = cruzamento
+      const sinaisTrocaram = prevDiff * currDiff < 0;
+      const eraSignificativo = Math.abs(prevDiff) >= THRESHOLD_ANTES;
+      const agSignificativo  = Math.abs(currDiff) >= THRESHOLD_DEPOIS;
+      if (sinaisTrocaram && eraSignificativo && agSignificativo) {
         crossovers.push({ i, fechandoMais: currDiff > 0 });
       }
     }

@@ -54,7 +54,7 @@ async function getAccessToken() {
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cache-Control', 's-maxage=300'); // cache 5 min no Vercel
+  res.setHeader('Cache-Control', 'no-store, no-cache'); // sem cache — recado sempre fresco
 
   try {
     const token = await getAccessToken();

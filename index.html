@@ -722,12 +722,12 @@
     <!-- KPIs DO EXPERIMENTO -->
     <div class="kpi-strip" style="grid-template-columns:repeat(5,1fr)">
       <div class="kpi" style="--kpi-accent:var(--yellow)">
-        <div class="kpi-label">SAT Processos Ativos</div>
+        <div class="kpi-label">Tickets Técnicos Ativos</div>
         <div class="kpi-value" id="expTecAtivos">—</div>
         <div class="kpi-sub" id="expTecAtivosSub"></div>
       </div>
       <div class="kpi" style="--kpi-accent:var(--cyan)">
-        <div class="kpi-label">Com SAT Processos</div>
+        <div class="kpi-label">Na Fase SAT Processos</div>
         <div class="kpi-value" id="expComSATProc">—</div>
         <div class="kpi-sub" id="expComSATProcSub"></div>
       </div>
@@ -2186,13 +2186,18 @@
       const diasExp  = Math.floor((Date.now() - EXP_START) / 86400000);
 
       document.getElementById('expDiasLabel').textContent = diasExp + ' dias de experimento';
-      setEl('expTecAtivos',   comSATProc.length);
-      setEl('expTecAtivosSub', comSATProc.filter(t=>t.statusType==='Open').length + ' abertos · ' + comSATProc.filter(t=>t.statusType==='On Hold').length + ' em espera');
+
+      // Card 1: total técnicos ativos (todos os times)
+      setEl('expTecAtivos',   tecAtivos.length);
+      setEl('expTecAtivosSub', tecAtivos.filter(t=>t.statusType==='Open').length + ' abertos · ' + tecAtivos.filter(t=>t.statusType==='On Hold').length + ' em espera');
+
+      // Card 2: desses, quantos estão na fase SAT Processos
       const viniTec   = comSATProc.filter(t=>t.assigneeId===VINI_AGENT_ID).length;
       const camilaTec = comSATProc.filter(t=>t.assigneeId===CAMILA_AGENT_ID).length;
       const outrosTec = comSATProc.length - viniTec - camilaTec;
+      const pctSAT = tecAtivos.length ? Math.round(comSATProc.length / tecAtivos.length * 100) : 0;
       setEl('expComSATProc',  comSATProc.length);
-      setEl('expComSATProcSub', `Vinicius: ${viniTec} · Camila: ${camilaTec}${outrosTec>0?' · Outros: '+outrosTec:''}`);
+      setEl('expComSATProcSub', `${pctSAT}% dos técnicos · Vinicius: ${viniTec} · Camila: ${camilaTec}${outrosTec>0?' · Outros: '+outrosTec:''}`);
       setEl('expFechados',    tecFechados.length);
       setEl('expFechadosSub', (tecFechados.length / Math.max(diasExp/7,1)).toFixed(1) + '/semana');
       setEl('expTMA',         tmaMedia ? Math.round(tmaMedia) + 'd' : '—');

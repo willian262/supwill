@@ -91,7 +91,7 @@ export default async function handler(req, res) {
         const results = await Promise.all(
           froms.map(f => zohoRequest('tickets', {
             from: f, limit: LIMIT,
-            fields: 'id,ticketNumber,subject,status,statusType,departmentId,createdTime,modifiedTime,closedTime,classification,assigneeId'
+            fields: 'id,ticketNumber,subject,status,statusType,departmentId,createdTime,modifiedTime,closedTime,classification,assigneeId,teamId'
           }, accessToken))
         );
         let gotAny = false;
@@ -123,7 +123,7 @@ export default async function handler(req, res) {
         froms.map(f => zohoRequest('tickets', {
           from: f,
           limit: LIMIT,
-          fields: 'id,ticketNumber,subject,status,statusType,priority,dueDate,assigneeId,departmentId,createdTime,modifiedTime,closedTime,classification'
+          fields: 'id,ticketNumber,subject,status,statusType,priority,dueDate,assigneeId,departmentId,createdTime,modifiedTime,closedTime,classification,teamId'
         }, accessToken))
       );
       let gotAny = false;

@@ -775,54 +775,109 @@
     <!-- LINHA: METAS + DISTRIBUIÇÃO -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
 
-      <!-- METAS DO EXPERIMENTO -->
-      <div class="card">
-        <div class="card-head"><span class="card-title">🎯 Metas do Experimento</span></div>
-        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+      <!-- MÉTRICAS DO EXPERIMENTO -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
 
-          <!-- Meta 1: Backlog técnico caindo -->
-          <div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-              <div style="font-size:12px;color:var(--text)">Backlog técnico caindo semana a semana</div>
-              <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700" id="expMeta1Badge">—</div>
+        <!-- QUANTITATIVAS -->
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">📊 Métricas Quantitativas</span>
+            <span style="font-size:10px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px">dados do Zoho</span>
+          </div>
+          <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+
+            <!-- Q1: % fechados em menos de 30 dias -->
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+                <div style="font-size:12px;color:var(--text)">Tickets fechados em menos de 30 dias</div>
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700" id="expQ1Badge">—</div>
+              </div>
+              <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+                <div id="expQ1Bar" style="height:100%;border-radius:3px;transition:width .5s;width:0%"></div>
+              </div>
+              <div style="font-size:10px;color:var(--muted);margin-top:3px" id="expQ1Sub"></div>
             </div>
-            <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
-              <div id="expMeta1Bar" style="height:100%;border-radius:3px;transition:width .5s;background:var(--green);width:0%"></div>
+
+            <!-- Q2: Velocidade de fechamento por semana -->
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+                <div style="font-size:12px;color:var(--text)">Média de fechamentos por semana</div>
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700" id="expQ2Badge">—</div>
+              </div>
+              <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+                <div id="expQ2Bar" style="height:100%;border-radius:3px;transition:width .5s;width:0%"></div>
+              </div>
+              <div style="font-size:10px;color:var(--muted);margin-top:3px" id="expQ2Sub"></div>
             </div>
-            <div style="font-size:10px;color:var(--muted);margin-top:4px" id="expMeta1Sub"></div>
+
+            <!-- Q3: % SAT Processos do total técnico -->
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+                <div style="font-size:12px;color:var(--text)">% dos técnicos na fase SAT Processos</div>
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700" id="expQ3Badge">—</div>
+              </div>
+              <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+                <div id="expQ3Bar" style="height:100%;border-radius:3px;transition:width .5s;width:0%"></div>
+              </div>
+              <div style="font-size:10px;color:var(--muted);margin-top:3px" id="expQ3Sub">percentual do total técnico com team SAT Processos</div>
+            </div>
+
+            <!-- Q4: Velocidade Análise de AR -->
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+                <div style="font-size:12px;color:var(--text)">Tempo médio em "Análise de AR"</div>
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700" id="expQ4Badge">—</div>
+              </div>
+              <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+                <div id="expQ4Bar" style="height:100%;border-radius:3px;transition:width .5s;width:0%"></div>
+              </div>
+              <div style="font-size:10px;color:var(--muted);margin-top:3px" id="expQ4Sub">meta: técnicos resolvem ARs em menos de 2 dias</div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- QUALITATIVAS + PIPELINE -->
+        <div style="display:flex;flex-direction:column;gap:14px">
+
+          <!-- Pipeline SAT Processos -->
+          <div class="card">
+            <div class="card-head"><span class="card-title">🔄 Pipeline SAT Processos</span></div>
+            <div style="padding:12px 16px;display:flex;flex-direction:column;gap:6px" id="expPipeline">
+              <div class="no-data">Carregando...</div>
+            </div>
           </div>
 
-          <!-- Meta 2: TMA abaixo de 30 dias -->
-          <div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-              <div style="font-size:12px;color:var(--text)">TMA médio abaixo de 30 dias</div>
-              <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700" id="expMeta2Badge">—</div>
+          <!-- TMA distribuição -->
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">⏱ Distribuição do TMA — Fechados</span>
+              <span style="font-size:10px;color:var(--muted)" id="expTMADistTotal"></span>
             </div>
-            <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
-              <div id="expMeta2Bar" style="height:100%;border-radius:3px;transition:width .5s;width:0%"></div>
+            <div style="padding:12px 16px;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="font-size:11px;color:var(--green);width:70px;flex-shrink:0">Menos 30d</div>
+                <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+                  <div id="expTMAlt30Bar" style="height:100%;background:var(--green);border-radius:4px;transition:width .5s;width:0%"></div>
+                </div>
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--green);width:50px;text-align:right" id="expTMAlt30">—</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="font-size:11px;color:var(--orange);width:70px;flex-shrink:0">30 a 60d</div>
+                <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+                  <div id="expTMAbt30Bar" style="height:100%;background:var(--orange);border-radius:4px;transition:width .5s;width:0%"></div>
+                </div>
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--orange);width:50px;text-align:right" id="expTMAbt30">—</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="font-size:11px;color:var(--red);width:70px;flex-shrink:0">Mais 60d</div>
+                <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+                  <div id="expTMAgt60Bar" style="height:100%;background:var(--red);border-radius:4px;transition:width .5s;width:0%"></div>
+                </div>
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--red);width:50px;text-align:right" id="expTMAgt60">—</div>
+              </div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">meta: maioria abaixo de 30 dias</div>
             </div>
-            <div style="font-size:10px;color:var(--muted);margin-top:4px" id="expMeta2Sub"></div>
-          </div>
-
-          <!-- Meta 3: Parados -5 dias abaixo de 20% -->
-          <div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-              <div style="font-size:12px;color:var(--text)">Tickets parados +5 dias abaixo de 20%</div>
-              <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700" id="expMeta3Badge">—</div>
-            </div>
-            <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
-              <div id="expMeta3Bar" style="height:100%;border-radius:3px;transition:width .5s;width:0%"></div>
-            </div>
-            <div style="font-size:10px;color:var(--muted);margin-top:4px" id="expMeta3Sub"></div>
-          </div>
-
-          <!-- Meta 4: Saldo semanal positivo -->
-          <div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-              <div style="font-size:12px;color:var(--text)">Saldo semanal positivo (fechando mais do que abre)</div>
-              <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700" id="expMeta4Badge">—</div>
-            </div>
-            <div style="font-size:10px;color:var(--muted);margin-top:2px" id="expMeta4Sub"></div>
           </div>
 
         </div>
@@ -2252,27 +2307,98 @@
       }
 
       const totalSemanas=sSaldo.length;
-      const semanasPositivas=sSaldo.filter(s=>s>0).length;
       const saldoAcum=sFechados.reduce((a,b)=>a+b,0)-sAbertos.reduce((a,b)=>a+b,0);
       const tmaAtual=tmaMedia?Math.round(tmaMedia):999;
-      // pct5 já usa comSATProc como base
-      const meta1OK=saldoAcum>0, meta2OK=tmaAtual<=30, meta3OK=pct5<=20;
-      const ultimas2=sSaldo.slice(-2); const meta4OK=ultimas2.length>=2&&ultimas2.every(s=>s>0);
 
-      const setMeta=(id,ok,badge,bar,sub,pct,cor1,cor2)=>{
-        document.getElementById(id+'Badge').textContent=ok?'✅ Atingida':badge;
-        document.getElementById(id+'Badge').style.color=ok?'var(--green)':cor1;
-        document.getElementById(id+'Bar').style.width=pct+'%';
-        document.getElementById(id+'Bar').style.background=ok?'var(--green)':cor1;
-        document.getElementById(id+'Sub').textContent=sub;
+      // ── Buscar dados para novas métricas ──
+      const satFechados = closed.filter(t=>t.teamId===SAT_PROC_TEAM&&t.closedTime&&t.createdTime&&new Date(t.closedTime).getTime()>=EXP_START);
+      const tmaDist = {lt30:0, bt30_60:0, gt60:0};
+      satFechados.forEach(t=>{
+        const dias=(new Date(t.closedTime)-new Date(t.createdTime))/86400000;
+        if(dias<30) tmaDist.lt30++; else if(dias<=60) tmaDist.bt30_60++; else tmaDist.gt60++;
+      });
+      const emAnaliseAR  = all.filter(t=>t.status==='Análise de AR');
+      const avgAnalise   = emAnaliseAR.length ? emAnaliseAR.reduce((s,t)=>s+daysSince(t.modifiedTime),0)/emAnaliseAR.length : null;
+      const fechPorSemana = satFechados.length / Math.max(diasExp/7, 1);
+      const pctLt30 = satFechados.length ? Math.round(tmaDist.lt30/satFechados.length*100) : 0;
+      const pctSAT  = tecAtivos.length ? Math.round(comSATProc.length/tecAtivos.length*100) : 0;
+
+      const setQ = (id, ok, badge, barPct, sub, cor) => {
+        const badge_el = document.getElementById(id+'Badge');
+        const bar_el   = document.getElementById(id+'Bar');
+        const sub_el   = document.getElementById(id+'Sub');
+        if(badge_el){ badge_el.textContent=ok?'✅ Atingida':badge; badge_el.style.color=ok?'var(--green)':cor; }
+        if(bar_el)  { bar_el.style.width=barPct+'%'; bar_el.style.background=ok?'var(--green)':cor; }
+        if(sub_el)  { sub_el.textContent=sub; }
       };
 
-      setMeta('expMeta1',meta1OK,'⏳ Em progresso','','Saldo acumulado: '+(saldoAcum>=0?'+':'')+saldoAcum+' · '+semanasPositivas+'/'+totalSemanas+' semanas positivas',Math.min(100,Math.max(0,50+saldoAcum)),'var(--orange)','');
-      setMeta('expMeta2',meta2OK,'⏳ '+tmaAtual+'d (meta: 30d)','','TMA atual: '+tmaAtual+' dias — reduzir mais '+Math.max(0,tmaAtual-30)+'d para meta',Math.max(0,Math.min(100,Math.round((1-tmaAtual/60)*100))),tmaAtual<45?'var(--orange)':'var(--red)','');
-      setMeta('expMeta3',meta3OK,'⏳ '+pct5+'% (meta: ≤20%)','',parados5.length+' de '+comSATProc.length+' tickets SAT Processos parados +5 dias',Math.min(100,Math.round((1-pct5/50)*100)),pct5<35?'var(--orange)':'var(--red)','');
-      document.getElementById('expMeta4Badge').textContent=meta4OK?'✅ Positivo':'⏳ '+ultimas2.map(s=>(s>=0?'+':'')+s).join(', ');
-      document.getElementById('expMeta4Badge').style.color=meta4OK?'var(--green)':'var(--orange)';
-      document.getElementById('expMeta4Sub').textContent='Últimas 2 semanas: '+sSaldo.slice(-2).map((s,i)=>'S'+(totalSemanas-1+i)+': '+(s>=0?'+':'')+s).join(' · ');
+      // Q1: % fechados em menos de 30 dias — meta: >40%
+      setQ('expQ1', pctLt30>=40,
+        '⏳ '+pctLt30+'% (meta: ≥40%)',
+        pctLt30,
+        tmaDist.lt30+' de '+satFechados.length+' fechados · '+tmaDist.bt30_60+' entre 30-60d · '+tmaDist.gt60+' acima de 60d',
+        pctLt30>=25?'var(--orange)':'var(--red)');
+
+      // Q2: Média fechamentos/semana — meta: ≥7/semana
+      setQ('expQ2', fechPorSemana>=7,
+        '⏳ '+fechPorSemana.toFixed(1)+'/sem (meta: ≥7)',
+        Math.min(100,Math.round(fechPorSemana/7*100)),
+        satFechados.length+' fechados em '+Math.round(diasExp/7)+' semanas · tendência: '+(sSaldo.slice(-3).filter(s=>s>0).length>=2?'melhorando':'instável'),
+        fechPorSemana>=4?'var(--orange)':'var(--red)');
+
+      // Q3: % SAT Processos do total técnico — meta: ≤40% (ideal: passando rápido)
+      const q3ok = pctSAT <= 40;
+      setQ('expQ3', q3ok,
+        '⏳ '+pctSAT+'% (meta: ≤40%)',
+        Math.min(100, Math.round((1-pctSAT/100)*100)),
+        comSATProc.length+' de '+tecAtivos.length+' técnicos no team SAT Processos agora',
+        pctSAT<=55?'var(--orange)':'var(--red)');
+
+      // Q4: Tempo médio em Análise de AR — meta: ≤2 dias
+      const avgAR = avgAnalise ? Math.round(avgAnalise*10)/10 : null;
+      setQ('expQ4', avgAR!==null && avgAR<=2,
+        avgAR ? '⏳ '+avgAR+'d (meta: ≤2d)' : '— sem dados',
+        avgAR ? Math.min(100, Math.round((1-avgAR/7)*100)) : 0,
+        emAnaliseAR.length+' tickets em Análise de AR agora · média '+( avgAR ? avgAR+'d parados' : 'N/D'),
+        avgAR && avgAR<=4 ? 'var(--orange)':'var(--red)');
+
+      // ── TMA Distribuição ──
+      const tmaTotal = satFechados.length;
+      document.getElementById('expTMADistTotal').textContent = tmaTotal+' fechados no experimento';
+      const setBar = (id, val, max) => {
+        const pct = max>0?Math.round(val/max*100):0;
+        document.getElementById(id+'Bar').style.width=pct+'%';
+        document.getElementById(id).textContent=val+' ('+pct+'%)';
+      };
+      setBar('expTMAlt30', tmaDist.lt30, tmaTotal);
+      setBar('expTMAbt30', tmaDist.bt30_60, tmaTotal);
+      setBar('expTMAgt60', tmaDist.gt60, tmaTotal);
+
+      // ── Pipeline SAT Processos ──
+      const satStatus = {};
+      comSATProc.forEach(t=>{ satStatus[t.status]=(satStatus[t.status]||0)+1; });
+      const topStatus = Object.entries(satStatus).sort((a,b)=>b[1]-a[1]).slice(0,8);
+      const maxSt = topStatus[0]?.[1] || 1;
+      const pipelineColors = {
+        'LAB': 'var(--cyan)', 'AST': 'var(--purple)', 'Aguardando': 'var(--orange)',
+        'Cliente': 'var(--yellow)', 'Emissão': 'var(--green)', 'Correios': 'var(--muted)',
+        'Em Teste': 'var(--cyan)', 'Em Manutenção': 'var(--purple)', 'Devolver': 'var(--red)'
+      };
+      const getColor = s => Object.entries(pipelineColors).find(([k])=>s.includes(k))?.[1] || 'var(--muted)';
+      document.getElementById('expPipeline').innerHTML = topStatus.map(([st,cnt])=>{
+        const pct = Math.round(cnt/maxSt*100);
+        const cor = getColor(st);
+        return `<div style="display:flex;align-items:center;gap:8px">
+          <div style="font-size:10px;color:var(--muted);width:190px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${st}">${st}</div>
+          <div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${cor};border-radius:3px;transition:width .5s"></div>
+          </div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:${cor};width:24px;text-align:right">${cnt}</div>
+        </div>`;
+      }).join('') || '<div class="no-data">Sem dados</div>';
+
+      // ── Veredicto — baseado nas novas métricas ──
+      const qOK = [pctLt30>=40, fechPorSemana>=7, q3ok, avgAR!==null&&avgAR<=2].filter(Boolean).length;
 
       // Cards simples Vinicius + Camila
       const mkAgent = (agentId, label, cor) => {
@@ -2291,7 +2417,7 @@
         (outrosSATProc>0 ? '<div class="agent-row"><div class="avatar" style="background:rgba(136,133,128,0.15);color:var(--muted)">?</div><div><div class="agent-name">Outros</div><div class="agent-sub">'+outrosSATProc+' tickets</div></div><div class="agent-total">'+outrosSATProc+'</div></div>' : '') ||
         '<div class="no-data">Sem dados</div>';
 
-      const metasOK=[meta1OK,meta2OK,meta3OK,meta4OK].filter(Boolean).length;
+      const metasOK=qOK;
       let html,cor;
       if(metasOK>=3){cor='var(--green)';html=`<div style="display:flex;align-items:center;gap:16px"><div style="font-size:48px">✅</div><div><div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--green)">CONTINUAR — Experimento funcionando</div><div style="font-size:12px;color:var(--muted);margin-top:4px">${metasOK} de 4 metas atingidas · O SAT Processos está acelerando a resolução dos tickets técnicos</div></div></div>`;}
       else if(metasOK>=2){cor='var(--orange)';html=`<div style="display:flex;align-items:center;gap:16px"><div style="font-size:48px">⏳</div><div><div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--orange)">AGUARDAR — Resultados parciais positivos</div><div style="font-size:12px;color:var(--muted);margin-top:4px">${metasOK} de 4 metas atingidas · Promissor mas precisa de mais tempo</div></div></div>`;}

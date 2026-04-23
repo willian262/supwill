@@ -2708,7 +2708,23 @@
         saldoDepoisEl.textContent = (saldoDepois >= 0 ? '+' : '') + saldoDepois.toFixed(1) + '/sem';
         saldoDepoisEl.style.color = saldoDepois >= 0 ? 'var(--green)' : 'var(--red)';
       }
-      setDelta('expDeltaSaldo', delta(saldoAntes, saldoDepois, false));
+      // Saldo: não faz sentido calcular % quando muda de sinal — mostrar só a mudança absoluta
+      const saldoDeltaEl = document.getElementById('expDeltaSaldo');
+      if (saldoDeltaEl) {
+        const diffSaldo = saldoDepois - saldoAntes;
+        // Se mudou de negativo para positivo (ou vice-versa), mostrar isso explicitamente
+        if (saldoAntes < 0 && saldoDepois >= 0) {
+          saldoDeltaEl.textContent = '↑ virou positivo';
+          saldoDeltaEl.style.color = 'var(--green)';
+        } else if (saldoAntes >= 0 && saldoDepois < 0) {
+          saldoDeltaEl.textContent = '↓ virou negativo';
+          saldoDeltaEl.style.color = 'var(--red)';
+        } else {
+          const pct = saldoAntes !== 0 ? Math.round(Math.abs(diffSaldo)/Math.abs(saldoAntes)*100) : 0;
+          saldoDeltaEl.textContent = (diffSaldo>=0?'+':'')+diffSaldo.toFixed(1)+' ('+pct+'%)';
+          saldoDeltaEl.style.color = diffSaldo >= 0 ? 'var(--green)' : 'var(--red)';
+        }
+      }
 
       // Aviso sobre limitação da janela de dados
       document.getElementById('expComparativoAviso').textContent =

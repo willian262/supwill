@@ -874,6 +874,10 @@
             <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:12px" id="expLabelAntes">01/Jan → 09/Fev 2026</div>
             <div style="display:flex;flex-direction:column;gap:10px">
               <div style="display:flex;justify-content:space-between;align-items:baseline">
+                <div style="font-size:12px;color:var(--muted)">Entrada/semana</div>
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text)" id="expAvantEntrada">—</div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline">
                 <div style="font-size:12px;color:var(--muted)">Fechamentos/semana</div>
                 <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text)" id="expAvantFechSem">—</div>
               </div>
@@ -895,6 +899,13 @@
           <div style="padding-left:24px">
             <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--cyan);margin-bottom:12px">Com SAT Processos</div>
             <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline">
+                <div style="font-size:12px;color:var(--muted)">Entrada/semana</div>
+                <div style="display:flex;align-items:baseline;gap:8px">
+                  <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text)" id="expDepoisEntrada">—</div>
+                  <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700" id="expDeltaEntrada"></div>
+                </div>
+              </div>
               <div style="display:flex;justify-content:space-between;align-items:baseline">
                 <div style="font-size:12px;color:var(--muted)">Fechamentos/semana</div>
                 <div style="display:flex;align-items:baseline;gap:8px">
@@ -2627,6 +2638,19 @@
       const tmaAntes  = tmaCalc(refAntes);
       const tmaDepois = tmaCalc(fechDepois);
 
+      // Entrada de tickets: criados no período (usa todos disponíveis — ativos + fechados)
+      const todosUniq = (() => {
+        const vistos = new Set();
+        return [...all, ...closed].filter(t => { if(vistos.has(t.id)) return false; vistos.add(t.id); return true; });
+      })();
+      const tOuvIdsComp2 = new Set(all.filter(t=>t.assigneeId==='365059000020303001').map(t=>t.id));
+      const isTecComp = t => !tOuvIdsComp2.has(t.id) && isTec(t);
+      const EXP_START_COMP = new Date('2026-02-10T00:00:00-03:00').getTime();
+      const entradasAntes  = todosUniq.filter(t => { if(!t.createdTime||!isTecComp(t)) return false; const c=new Date(t.createdTime).getTime(); return c>=antesInicio&&c<=antesFim; });
+      const entradasDepois = todosUniq.filter(t => { if(!t.createdTime||!isTecComp(t)) return false; return new Date(t.createdTime).getTime()>=EXP_START_COMP; });
+      const entradaVelAntes  = entradasAntes.length / (diasRefAntes/7);
+      const entradaVelDepois = entradasDepois.length / (diasExp/7);
+
       const paradosAntes  = tecAtivosTodos.filter(t=>daysSince(t.modifiedTime)>5 && t.createdTime && new Date(t.createdTime).getTime() < EXP_START).length;
       const paradosDepois = tecAtivosTodos.filter(t=>daysSince(t.modifiedTime)>5 && t.createdTime && new Date(t.createdTime).getTime() >= EXP_START).length;
 
@@ -2640,18 +2664,22 @@
         return { txt: `${sinal}${diff > 0 ? '+' : ''}${typeof antes === 'number' && antes % 1 !== 0 ? diff.toFixed(1) : Math.round(diff)} (${pct}%)`, cor };
       };
 
+      document.getElementById('expAvantEntrada').textContent  = entradaVelAntes.toFixed(1) + '/sem';
       document.getElementById('expAvantFechSem').textContent  = velAntes.toFixed(1) + '/sem';
       document.getElementById('expAvantTMA').textContent      = tmaAntes ? Math.round(tmaAntes) + 'd' : '—';
       document.getElementById('expAvantParados').textContent  = paradosAntes;
+      document.getElementById('expDepoisEntrada').textContent = entradaVelDepois.toFixed(1) + '/sem';
       document.getElementById('expDepoisFechSem').textContent = velDepois.toFixed(1) + '/sem';
       document.getElementById('expDepoisTMA').textContent     = tmaDepois ? Math.round(tmaDepois) + 'd' : '—';
       document.getElementById('expDepoisParados').textContent = paradosDepois;
 
+      const dEntrada = delta(entradaVelAntes, entradaVelDepois, true); // menor = melhor (menos entrada)
       const dFech = delta(velAntes, velDepois, false);
       const dTMA  = delta(tmaAntes, tmaDepois, true);
       const dPar  = delta(paradosAntes, paradosDepois, true);
 
       const setDelta = (id, d) => { const el=document.getElementById(id); el.textContent=d.txt; el.style.color=d.cor; };
+      setDelta('expDeltaEntrada', dEntrada);
       setDelta('expDeltaFechSem', dFech);
       setDelta('expDeltaTMA',     dTMA);
       setDelta('expDeltaParados', dPar);

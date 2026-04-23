@@ -889,6 +889,10 @@
                 <div style="font-size:12px;color:var(--muted)">Tickets parados +5d</div>
                 <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text)" id="expAvantParados">—</div>
               </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline">
+                <div style="font-size:12px;color:var(--muted)">Saldo semanal (fechou − entrou)</div>
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text)" id="expAvantSaldo">—</div>
+              </div>
             </div>
           </div>
 
@@ -925,6 +929,13 @@
                 <div style="display:flex;align-items:baseline;gap:8px">
                   <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text)" id="expDepoisParados">—</div>
                   <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700" id="expDeltaParados"></div>
+                </div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline">
+                <div style="font-size:12px;color:var(--muted)">Saldo semanal (fechou − entrou)</div>
+                <div style="display:flex;align-items:baseline;gap:8px">
+                  <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text)" id="expDepoisSaldo">—</div>
+                  <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700" id="expDeltaSaldo"></div>
                 </div>
               </div>
             </div>
@@ -2678,11 +2689,26 @@
       const dTMA  = delta(tmaAntes, tmaDepois, true);
       const dPar  = delta(paradosAntes, paradosDepois, true);
 
-      const setDelta = (id, d) => { const el=document.getElementById(id); el.textContent=d.txt; el.style.color=d.cor; };
+      const setDelta = (id, d) => { const el=document.getElementById(id); if(el){el.textContent=d.txt; el.style.color=d.cor;} };
       setDelta('expDeltaEntrada', dEntrada);
       setDelta('expDeltaFechSem', dFech);
       setDelta('expDeltaTMA',     dTMA);
       setDelta('expDeltaParados', dPar);
+
+      // Saldo semanal = fechamentos/sem - entradas/sem
+      const saldoAntes  = velAntes  - entradaVelAntes;
+      const saldoDepois = velDepois - entradaVelDepois;
+      const saldoAntesEl  = document.getElementById('expAvantSaldo');
+      const saldoDepoisEl = document.getElementById('expDepoisSaldo');
+      if (saldoAntesEl) {
+        saldoAntesEl.textContent = (saldoAntes >= 0 ? '+' : '') + saldoAntes.toFixed(1) + '/sem';
+        saldoAntesEl.style.color = saldoAntes >= 0 ? 'var(--green)' : 'var(--red)';
+      }
+      if (saldoDepoisEl) {
+        saldoDepoisEl.textContent = (saldoDepois >= 0 ? '+' : '') + saldoDepois.toFixed(1) + '/sem';
+        saldoDepoisEl.style.color = saldoDepois >= 0 ? 'var(--green)' : 'var(--red)';
+      }
+      setDelta('expDeltaSaldo', delta(saldoAntes, saldoDepois, false));
 
       // Aviso sobre limitação da janela de dados
       document.getElementById('expComparativoAviso').textContent =
